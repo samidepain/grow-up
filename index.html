@@ -204,7 +204,7 @@ textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:1
 
 <header class="top"><div class="top-in">
   <div class="brand">Carnet <b>muscu</b></div>
-  <span id="mode" class="pill">Connexion…</span>
+  <span id="mode" class="pill">Chargement…</span>
 </div></header>
 
 <main id="app"><p class="empty">Chargement du carnet…</p></main>
@@ -325,54 +325,17 @@ const DAY_SHORT = {1:'Lun',2:'Mar',3:'Mer',4:'Jeu',5:'Ven',6:'Sam',0:'Dim'};
 const DAY_LABELS = ['Repos','Basket','Match'];
 
 /* ================= État et stockage ================= */
-const S = { docs:new Map(), mode:'loading', loaded:false, view:'today', dirty:new Set(),
-  progEx:'la_hack', progTab:'seances', openHist:null, confirm:null, summary:null, exportText:null, exportName:null,
-  restEnd:0, restLabel:'', restDoneAt:0, localBackup:null, picker:null, draft:null };
+const S = { docs:new Map(), loaded:false, view:'today',
+  progEx:'la_hack', progTab:'seances', openHist:null, confirm:null, summary:null,
+  restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null };
 const LS_DOCS = 'carnet_docs_v1';
-let col = null; let downloadsCap = null;
 
 function loadLocal(){ const raw = lsGet(LS_DOCS); if (!raw) return new Map(); try { return new Map(Object.entries(JSON.parse(raw))); } catch (e) { return new Map(); } }
 function saveLocal(){ lsSet(LS_DOCS, JSON.stringify(Object.fromEntries(S.docs))); }
-const wTimers = {}; const writing = new Set(); const again = new Set();
-function put(id, obj){ S.docs.set(id, obj); S.dirty.add(id); if (S.mode === 'cloud') sched(id, 700); else { saveLocal(); S.dirty.delete(id); } }
-function del(id){ S.docs.delete(id); S.dirty.add(id); if (S.mode === 'cloud') sched(id, 0); else { saveLocal(); S.dirty.delete(id); } }
-function sched(id, ms){ clearTimeout(wTimers[id]); wTimers[id] = setTimeout(() => flush(id, false), ms); }
-async function flush(id, retried){
-  if (writing.has(id)) { again.add(id); return; }
-  writing.add(id);
-  const obj = S.docs.get(id);
-  try { if (obj === undefined) await col.doc(id).delete(); else await col.doc(id).set(clone(obj)); }
-  catch (e) {
-    const code = e && e.code;
-    if (code === 'unavailable' && !retried) { writing.delete(id); setTimeout(() => flush(id, true), 1500 + Math.random() * 1500); return; }
-    toast(code === 'quota_exceeded' ? 'Stockage plein : exporte tes données puis supprime d’anciennes séances.' : 'Enregistrement impossible pour l’instant. Garde la page ouverte et réessaie plus tard.');
-  }
-  writing.delete(id);
-  if (again.has(id)) { again.delete(id); flush(id, false); } else S.dirty.delete(id);
-}
-async function init(){
-  renderTabs(); render();
-  let db = null, user = null;
-  try {
-    if (window.claude && window.claude.use) {
-      const r = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
-      db = r[0]; user = r[1];
-      window.claude.use('downloads').then(d => { downloadsCap = d; }).catch(() => {});
-    }
-  } catch (e) {}
-  let uid = null;
-  try { uid = user ? await user.id() : null; } catch (e) {}
-  if (db && uid) { try { col = db.collection('data/users/' + uid); } catch (e) { col = null; } }
-  if (col) {
-    const local = loadLocal(); S.localBackup = local.size ? local : null;
-    S.mode = 'cloud';
-    col.onSnapshot(snap => {
-      const m = new Map();
-      snap.docs.forEach(d => { if (d.exists) m.set(d.id, clone(d.data())); });
-      S.dirty.forEach(id => { if (S.docs.has(id)) m.set(id, S.docs.get(id)); else m.delete(id); });
-      S.docs = m; S.loaded = true; softRender();
-    }, () => { S.syncErr = true; toast('Synchronisation interrompue. Recharge la page.'); softRender(); });
-  } else { S.mode = 'local'; S.docs = loadLocal(); S.loaded = true; }
+function put(id, obj){ S.docs.set(id, obj); saveLocal(); }
+function del(id){ S.docs.delete(id); saveLocal(); }
+function init(){
+  S.docs = loadLocal(); S.loaded = true;
   render();
 }
 
@@ -822,11 +785,9 @@ function renderTabs(){
   const aw = S.loaded && activeWorkout(); const due = sessionDueToday();
   $('#tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'session' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
   const m = $('#mode');
-  if (!S.loaded) { m.className = 'pill'; m.textContent = 'Connexion…'; }
-  else if (S.mode === 'cloud') { m.className = 'pill ' + (S.syncErr ? 'bad' : 'good'); m.textContent = S.syncErr ? 'Synchro coupée' : 'Synchronisé'; }
+  if (!S.loaded) { m.className = 'pill'; m.textContent = 'Chargement…'; }
   else { m.className = 'pill warn'; m.textContent = 'Sur cet appareil'; }
 }
-function softRender(){ if ((S.view === 'session' && activeWorkout()) || S.draft || S.picker) { renderTabs(); return; } render(); }
 function render(){
   renderTabs();
   const v = S.view;
@@ -872,7 +833,7 @@ function viewToday(){
     const t = tplDef(plan.s);
     h += '<section class="card plan"><span class="label">' + (doneToday.length ? 'Au programme' : 'Rappel : séance aujourd’hui') + '</span><div class="name">' + esc(t.name) + '</div><p>' + esc(t.focus || '') + ' · environ ' + tplEst(t) + ' min</p>' + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');
     if (doneToday.some(w => w.tpl === plan.s || w.sess === plan.s)) h += '<div class="alert good">Séance faite aujourd’hui.</div>';
-    else h += '<button type="button" class="btn primary big" data-act="start" data-v="' + plan.s + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Connexion…') + '</button>';
+    else h += '<button type="button" class="btn primary big" data-act="start" data-v="' + plan.s + '"' + (S.loaded ? '' : ' disabled') + '>' + (S.loaded ? 'Commencer ' + esc(t.name) : 'Chargement…') + '</button>';
     h += '</section>';
   } else {
     let next = null; for (let i = 1; i <= 7 && !next; i++) { const dd = addDays(d, i); const p = planDay(parseIso(dd).getDay()); if (p.s) next = { d:dd, t:tplDef(p.s) }; }
@@ -1210,11 +1171,11 @@ function viewSettings(){
   const s = settings();
   let h = '<section class="card"><h3>Début du programme</h3><p class="muted small">Sert à calculer la semaine du bloc de 6 semaines (5 de progression, 1 de décharge). Choisis le lundi de ta première semaine.</p><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></section>';
   h += '<section class="card"><h3>Taille</h3><label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label></section>';
-  h += '<section class="card"><h3>Tes données</h3><p class="small">' + (S.mode === 'cloud' ? 'Tes séances sont enregistrées dans ton compte et privées : toi seul les vois, sur tous tes appareils.' : 'Les séances sont enregistrées seulement dans ce navigateur. Exporte-les régulièrement.') + '</p>';
+  h += '<section class="card"><h3>Tes données</h3><p class="small">Les séances sont enregistrées seulement dans ce navigateur. Exporte-les régulièrement.</p>';
   h += '<div class="row"><button type="button" class="btn" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
+  const shareKinds = ['json', 'csv'].filter(canShareKind);
+  if (shareKinds.length) h += '<div class="row">' + shareKinds.map(k => '<button type="button" class="btn" data-act="share" data-v="' + k + '">' + (k === 'json' ? 'Partager (JSON)' : 'Partager les séries (CSV)') + '</button>').join('') + '</div><p class="muted small">Partager permet d’enregistrer le fichier dans Fichiers ou de l’envoyer.</p>';
   h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
-  if (S.mode === 'cloud' && S.localBackup && S.localBackup.size) h += '<button type="button" class="btn" data-act="import-local">Récupérer ' + S.localBackup.size + ' éléments enregistrés sur cet appareil</button>';
-  if (S.exportText) h += '<div class="stack"><p class="small">Le téléchargement n’est pas disponible ici : copie le contenu dans un fichier <b>' + esc(S.exportName) + '</b>.</p><textarea id="export-text" readonly>' + esc(S.exportText) + '</textarea><button type="button" class="btn" data-act="copy-export">Copier</button></div>';
   h += '</section>';
   return h;
 }
@@ -1432,16 +1393,28 @@ const A = {
   'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; render(); toast('Exercice supprimé.'); },
   'reset-plan'(){ const s = Object.assign({}, settings()); delete s.plan; put('settings', Object.assign(s, { start: startDate() })); render(); toast('Planning d’origine rétabli.'); },
   // Données
-  async export(b){
-    const kind = b.dataset.v;
-    const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:2, exportedAt:new Date().toISOString(), docs:Object.fromEntries(S.docs) }, null, 2) : toCsv();
-    const filename = 'carnet-muscu-' + today() + (kind === 'json' ? '.json' : '.csv');
-    if (downloadsCap) { try { await downloadsCap.save({ filename, data }); toast('Fichier prêt.'); return; } catch (e) { if (e && (e.code === 'declined' || e.code === 'rate_limited')) return; } }
-    S.exportText = data; S.exportName = filename; render();
-  },
-  'copy-export'(){ const ta = $('#export-text'); const txt = S.exportText || ''; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast('Copié.'), () => { ta.select(); toast('Sélectionné : copie avec ton clavier.'); }); else ta.select(); },
-  'import-local'(){ let n = 0; S.localBackup.forEach((o, id) => { if (!S.docs.has(id)) { put(id, o); n++; } }); S.localBackup = null; render(); toast(n + ' éléments récupérés.'); }
+  export(b){ downloadFile(exportFile(b.dataset.v)); toast('Fichier prêt.'); },
+  async share(b){
+    // navigator.share doit partir directement du clic : rien d'asynchrone avant
+    const file = exportFile(b.dataset.v);
+    try { await navigator.share({ files:[file] }); }
+    catch (e) { if (e && e.name === 'AbortError') return; downloadFile(file); toast('Partage impossible : fichier téléchargé à la place.'); }
+  }
 };
+const EXPORT_TYPES = { json:'application/json', csv:'text/csv' };
+function exportFile(kind){
+  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:2, exportedAt:new Date().toISOString(), docs:Object.fromEntries(S.docs) }, null, 2) : toCsv();
+  return new File([data], 'carnet-muscu-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
+}
+function downloadFile(file){
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a'); a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function canShareKind(kind){
+  try { return !!(navigator.share && navigator.canShare && navigator.canShare({ files:[new File([''], 'test.' + kind, { type:EXPORT_TYPES[kind] })] })); } catch (e) { return false; }
+}
 function toCsv(){
   const rows = [['date','seance','exercice','serie','kg','reps','reserve']];
   workouts().forEach(w => { itemsOf(w).forEach(it => { const st = w.ex && w.ex[it.ex]; if (!st || it.kind === 'check') return; validSets(st.sets).forEach((x, i) => rows.push([w.date, wName(w), it.name, i + 1, it.kind === 'plyo' ? '' : String(num(x.kg) || 0), x.reps, st.rir == null ? '' : st.rir])); }); });
