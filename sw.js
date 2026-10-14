@@ -1,6 +1,7 @@
 // Grow up : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
-const VERSION = '6';
+// Même numéro que dans js/version.js (affiché dans Réglages).
+const VERSION = '1.0';
 const CACHE = 'grow-up-' + VERSION;
 const FILES = [
   './',
@@ -16,6 +17,7 @@ const FILES = [
   'js/store.js',
   'js/timers.js',
   'js/util.js',
+  'js/version.js',
   'js/views/editors.js',
   'js/views/history.js',
   'js/views/picker.js',
