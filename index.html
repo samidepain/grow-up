@@ -110,6 +110,8 @@ main{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:16px calc(v
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{min-width:38px;min-height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-family:var(--f-display);font-weight:600;font-size:17px;padding:0 10px}
 .chip.txt{font-family:var(--f-body);font-size:14px}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.days .chip{min-width:0;padding:0}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .chip.on.hi{background:var(--bad);border-color:var(--bad);color:#fff}
 .chip.sec.on{background:var(--court);border-color:var(--court);color:var(--bg)}
@@ -190,6 +192,7 @@ textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:1
 .pick{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;min-height:52px}
 .pick .n{font-weight:700}
 .pick .m{font-size:13px;color:var(--muted)}
+.pick.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 
 /* Barres fixes */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -280,7 +283,7 @@ const BASE_EX = {
   la_hack:{name:'Hack squat', kind:'load', cat:'lower', step:5, sets:3, lo:5, hi:8, rest:150, knee:true, muscles:M(['Quadriceps'],['Fessiers']), cue:'Position de pieds confortable, descente contrôlée, amplitude sans douleur.'},
   la_rdl:{name:'RDL (soulevé de terre roumain)', kind:'load', cat:'lower', step:2.5, sets:3, lo:6, hi:8, rest:150, muscles:M(['Ischios','Fessiers']), cue:'Hanches vers l’arrière, dos neutre, barre près des jambes.'},
   la_step:{name:'Step-ups avec haltères', kind:'load', cat:'lower', step:2, sets:3, lo:6, hi:8, rest:90, uni:true, knee:true, muscles:M(['Quadriceps','Fessiers']), cue:'Reps par jambe, poids d’un haltère.'},
-  la_ext:{name:'Leg extension à une jambe', kind:'load', cat:'iso', step:2.5, sets:2, lo:10, hi:12, rest:75, uni:true, knee:true, muscles:M(['Quadriceps']), cue:'Commence entre 90° et 45-60° de flexion, puis gagne environ 10° vers l’extension toutes les 2 semaines sans réaction. Au-dessus de 3/10, reviens à la plage précédente.'},
+  la_ext:{name:'Leg extension à une jambe', kind:'load', cat:'iso', step:2.5, sets:2, lo:10, hi:12, rest:75, uni:true, knee:true, muscles:M(['Quadriceps']), cue:'Reps par jambe. Descente contrôlée, pause d’1 s jambe tendue.', cueKnee:'Commence entre 90° et 45-60° de flexion, puis gagne environ 10° vers l’extension toutes les 2 semaines sans réaction. Au-dessus de 3/10, reviens à la plage précédente.'},
   la_calf:{name:'Mollets debout lourds', kind:'load', cat:'iso', step:5, sets:3, lo:6, hi:10, rest:75, muscles:M(['Mollets']), cue:'Pause d’1 s en bas, montée complète.'},
   ub_incl:{name:'Développé incliné haltères', kind:'load', cat:'upper', step:2, sets:3, lo:8, hi:10, rest:120, muscles:M(['Pectoraux'],['Épaules','Triceps']), cue:'Banc à environ 30°, note le poids d’un haltère.'},
   ub_chin:{name:'Tractions prise neutre ou supination', kind:'bw', cat:'upper', step:1.25, sets:3, lo:6, hi:10, rest:120, muscles:M(['Dos'],['Biceps']), cue:'Arrête-toi 1-2 reps avant l’échec. Passe à 2 séries si les coudes ou la récupération se dégradent.'},
@@ -289,7 +292,7 @@ const BASE_EX = {
   ub_ham:{name:'Curl marteau', kind:'load', cat:'iso', step:1, sets:3, lo:10, hi:12, rest:75, muscles:M(['Biceps']), cue:'Prise neutre, coudes collés au corps.'},
   ub_rope:{name:'Extensions triceps à la corde', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:12, rest:75, muscles:M(['Triceps']), cue:'Écarte la corde en bas du mouvement.'},
   ub_abs:{name:'Abdos (vidéo Tibo InShape)', kind:'check', cue:'10 min, seulement si tu restes sous 1h30.'},
-  lb_rope:{name:'Corde à sauter', kind:'plyo', sets:3, lo:20, unit:'s', optional:true, cue:'Optionnelle : seulement les semaines avec une seule séance de basket.'},
+  lb_rope:{name:'Corde à sauter', kind:'plyo', sets:3, lo:20, unit:'s', optional:true, cue:'Optionnelle : à faire si tu te sens frais.', cueSport:'Optionnelle : seulement les semaines avec une seule séance de {sport}.'},
   lb_press:{name:'Presse à cuisses', kind:'load', cat:'lower', step:10, sets:3, lo:8, hi:12, rest:150, knee:true, muscles:M(['Quadriceps'],['Fessiers']), cue:'Position de pieds confortable, descente contrôlée.'},
   lb_thrust:{name:'Hip thrust', kind:'load', cat:'lower', step:5, sets:3, lo:6, hi:10, rest:150, muscles:M(['Fessiers'],['Ischios']), cue:'Pause d’1 s en haut, menton rentré.'},
   lb_curl:{name:'Leg curl', kind:'load', cat:'iso', step:2.5, sets:3, lo:8, hi:12, rest:75, muscles:M(['Ischios']), cue:'Descente lente, hanches plaquées.'},
@@ -309,38 +312,60 @@ const BASE_EX = {
   lib_ohp:{name:'Développé militaire haltères', kind:'load', cat:'upper', step:2, sets:3, lo:6, hi:10, rest:120, muscles:M(['Épaules'],['Triceps']), cue:'Assis ou debout, gainage serré.'},
   lib_ohext:{name:'Extension triceps poulie au-dessus de la tête', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:12, rest:75, muscles:M(['Triceps']), cue:'Coudes fixes, étirement complet derrière la tête.'},
   lib_pallof:{name:'Pallof press', kind:'load', cat:'iso', step:2.5, sets:3, lo:8, hi:12, rest:60, muscles:M(['Abdos']), cue:'Reps par côté, résiste à la rotation.'},
-  lib_boxjump:{name:'Box jumps', kind:'plyo', sets:3, lo:4, unit:'sauts', cue:'Hauteur modérée, réception souple, redescends en marchant.'}
+  lib_boxjump:{name:'Box jumps', kind:'plyo', sets:3, lo:4, unit:'sauts', cue:'Hauteur modérée, réception souple, redescends en marchant.'},
+  // Exercices courants, pour composer son propre programme.
+  // Pour en ajouter : un identifiant qui ne change plus jamais (l'historique s'y rattache), puis les mêmes champs que ci-dessus.
+  lib_squat:{name:'Squat à la barre', kind:'load', cat:'lower', step:2.5, sets:3, lo:6, hi:8, rest:180, knee:true, muscles:M(['Quadriceps'],['Fessiers']), cue:'Barre sur le haut du dos, descends en contrôle aussi bas que tu restes gainé.'},
+  lib_bench:{name:'Développé couché à la barre', kind:'load', cat:'upper', step:2.5, sets:3, lo:6, hi:8, rest:150, muscles:M(['Pectoraux'],['Triceps','Épaules']), cue:'Omoplates serrées, pieds au sol, barre au bas des pectoraux.'},
+  lib_deadlift:{name:'Soulevé de terre', kind:'load', cat:'lower', step:5, sets:3, lo:4, hi:6, rest:180, muscles:M(['Ischios','Fessiers'],['Dos']), cue:'Barre contre les tibias, dos neutre, pousse le sol avec les jambes.'},
+  lib_bulgarian:{name:'Fentes bulgares', kind:'load', cat:'lower', step:2, sets:3, lo:8, hi:12, rest:90, uni:true, knee:true, muscles:M(['Quadriceps','Fessiers']), cue:'Pied arrière sur un banc, reps par jambe, poids d’un haltère.'},
+  lib_legext:{name:'Leg extension', kind:'load', cat:'iso', step:2.5, sets:3, lo:10, hi:15, rest:75, knee:true, muscles:M(['Quadriceps']), cue:'Pause d’1 s jambes tendues, descente lente.'},
+  lib_dips:{name:'Dips', kind:'bw', cat:'upper', step:1.25, sets:3, lo:6, hi:10, rest:120, muscles:M(['Pectoraux','Triceps'],['Épaules']), cue:'Descends jusqu’à avoir les bras à 90°. Le poids noté est le lest (0 = poids du corps).'},
+  lib_pushup:{name:'Pompes', kind:'bw', cat:'upper', step:1.25, sets:3, lo:8, hi:15, rest:90, muscles:M(['Pectoraux'],['Triceps','Épaules']), cue:'Corps gainé, poitrine près du sol. Le poids noté est le lest (0 = poids du corps).'},
+  lib_curlbar:{name:'Curl à la barre', kind:'load', cat:'iso', step:2, sets:3, lo:8, hi:12, rest:75, muscles:M(['Biceps']), cue:'Coudes fixes, pas de balancier.'},
+  lib_facepull:{name:'Face pull', kind:'load', cat:'iso', step:2.5, sets:3, lo:12, hi:15, rest:60, muscles:M(['Épaules'],['Dos']), cue:'Corde vers le front, coudes hauts, pause d’1 s.'},
+  lib_legraise:{name:'Relevés de jambes suspendu', kind:'bw', cat:'iso', step:1, sets:3, lo:8, hi:15, rest:60, muscles:M(['Abdos']), cue:'Enroule le bassin, sans balancer. Le poids noté est le lest (0 = poids du corps).'}
 };
 const ALIAS = { ub_lat:'ua_lat', lb_warm:'la_warm' };
+// Séances modèles des programmes de départ. focusNoJump / cutNoJump : textes utilisés quand le module détente est désactivé (les sauts sont alors retirés).
 const BASE_TPL = {
   UA:{name:'Upper A', focus:'Poussée lourde et tractions', cut:'les abdos, puis 1 série d’élévations et de reverse fly',
     items:[{ex:'ua_bench'},{ex:'ua_pull'},{ex:'ua_lat',ss:'A'},{ex:'ua_rear',ss:'A'},{ex:'ua_skull',ss:'B'},{ex:'ua_curl',ss:'B'},{ex:'ua_abs'}]},
-  LA:{name:'Lower A', focus:'Force et détente', cut:'1 série de step-ups, puis 1 série de leg extension',
+  LA:{name:'Lower A', focus:'Force et détente', focusNoJump:'Force du bas du corps', cut:'1 série de step-ups, puis 1 série de leg extension',
     items:[{ex:'la_warm'},{ex:'la_pogo'},{ex:'la_cmj'},{ex:'la_hack'},{ex:'la_rdl'},{ex:'la_step'},{ex:'la_ext',ss:'C'},{ex:'la_calf',ss:'C'}]},
   UB:{name:'Upper B', focus:'Volume haut du corps', cut:'la vidéo d’abdos, puis 1 série d’élévations latérales',
     items:[{ex:'ub_incl'},{ex:'ub_chin'},{ex:'ub_row'},{ex:'ub_fly',ss:'D'},{ex:'ua_lat',ss:'D'},{ex:'ub_ham',ss:'E'},{ex:'ub_rope',ss:'E'},{ex:'ub_abs'}]},
-  LB:{name:'Lower B', focus:'Volume et chaîne postérieure', cut:'la corde, puis 1 série de back extensions, puis 1 série d’abduction',
-    items:[{ex:'la_warm'},{ex:'lb_rope'},{ex:'lb_press'},{ex:'lb_thrust'},{ex:'lb_curl',ss:'F'},{ex:'lb_abd',ss:'F'},{ex:'lb_back',ss:'G'},{ex:'lb_calf',ss:'G'}]}
+  LB:{name:'Lower B', focus:'Volume et chaîne postérieure', cut:'la corde, puis 1 série de back extensions, puis 1 série d’abduction', cutNoJump:'1 série de back extensions, puis 1 série d’abduction',
+    items:[{ex:'la_warm'},{ex:'lb_rope'},{ex:'lb_press'},{ex:'lb_thrust'},{ex:'lb_curl',ss:'F'},{ex:'lb_abd',ss:'F'},{ex:'lb_back',ss:'G'},{ex:'lb_calf',ss:'G'}]},
+  FA:{name:'Full body A', focus:'Squat, développé couché, rowing', cut:'1 série de curl et d’élévations, puis 1 série de leg curl',
+    items:[{ex:'lib_squat'},{ex:'lib_bench'},{ex:'ub_row'},{ex:'lb_curl'},{ex:'ua_lat',ss:'A'},{ex:'ub_ham',ss:'A'}]},
+  FB:{name:'Full body B', focus:'Soulevé de terre roumain, tirage, développé militaire', cut:'1 série d’extensions triceps et de mollets, puis 1 série de fendu arrière',
+    items:[{ex:'la_rdl'},{ex:'lib_pulldown'},{ex:'lib_ohp'},{ex:'lib_revlunge'},{ex:'ub_rope',ss:'B'},{ex:'la_calf',ss:'B'}]},
+  FC:{name:'Full body C', focus:'Presse, développé incliné, rowing à la poulie', cut:'1 série de reverse fly et d’abdos, puis 1 série de hip thrust',
+    items:[{ex:'lb_press'},{ex:'ub_incl'},{ex:'lib_cablerow'},{ex:'lb_thrust'},{ex:'ua_rear',ss:'C'},{ex:'ua_abs',ss:'C'}]}
 };
-// getDay() : 0 = dimanche
-const DEFAULT_PLAN = { 1:{s:'UA'}, 2:{s:'LA'}, 3:{label:'Repos'}, 4:{label:'Basket'}, 5:{s:'UB'}, 6:{label:'Match'}, 0:{s:'LB'} };
+// Programmes proposés au premier lancement. days : jours conseillés (getDay() : 0 = dimanche).
+const PROGRAMS = {
+  exemple:{ name:'Programme exemple', desc:'Haut et bas du corps en alternance : 4 séances par semaine, environ 1 h 15 chacune.', days:[1,2,5,0], tpls:['UA','LA','UB','LB'] },
+  fullbody:{ name:'Full body 3 jours', desc:'Tout le corps à chaque séance : 3 séances par semaine, environ 1 h chacune.', days:[1,3,5], tpls:['FA','FB','FC'] }
+};
+// Notes du programme exemple, affichées seulement avec son planning d'origine et le sport les lundis et jeudis, match le samedi. {Sport} = nom du sport.
 const DAY_NOTES = {
-  1:'Basket ce soir : fais la séance le matin ou le midi.',
+  1:'{Sport} ce soir : fais la séance le matin ou le midi.',
   2:'Environ 55 h avant l’entraînement physique du jeudi.',
   3:'Repos complet avant le jeudi.',
-  4:'Basket ce soir, la séance la plus physique.',
+  4:'{Sport} ce soir, la séance la plus physique.',
   5:'Haut du corps uniquement, la veille du match.',
   6:'Match ce soir.',
   0:'Plutôt en fin de matinée. Après un match dur : 2-3 reps en réserve et 1 série de moins sur les gros exercices.'
 };
 const DAY_ORDER = [1,2,3,4,5,6,0];
 const DAY_SHORT = {1:'Lun',2:'Mar',3:'Mer',4:'Jeu',5:'Ven',6:'Sam',0:'Dim'};
-const DAY_LABELS = ['Repos','Basket','Match'];
 
 /* ================= État et stockage ================= */
 const S = { docs:new Map(), loaded:false, view:'today',
   progEx:'la_hack', progTab:'seances', openHist:null, confirm:null, summary:null,
-  restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null };
+  restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null, setup:null, renaming:false };
 const LS_DOCS = 'carnet_docs_v1'; // ancien stockage : recopié dans IndexedDB au premier lancement, puis laissé en place
 const IDB_NAME = 'carnet-muscu';
 let idb = null; // null : IndexedDB indisponible, on reste sur localStorage
@@ -408,6 +433,7 @@ async function init(){
   try { idb = await openIdb(); S.docs = await loadIdb(idb); }
   catch (e) { idb = null; S.docs = loadLocal(); }
   S.loaded = true;
+  upgradeLegacy();
   render();
   if (idb && navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {});
 }
@@ -415,12 +441,43 @@ async function init(){
 /* ================= Accès aux données ================= */
 function settings(){ return S.docs.get('settings') || {}; }
 function putSettings(patch){ put('settings', Object.assign({}, settings(), { start: startDate() }, patch)); }
+// Options désactivées au départ, activables dans Programme › Réglages
+const mods = () => settings().modules || {};
+const kneeOn = () => !!mods().knee, jumpsOn = () => !!mods().jumps, sportOn = () => !!mods().sport;
+function sportInfo(){ const s = settings().sport || {}; return { name: String(s.name || '').trim() || 'Sport', train: s.train || [], match: s.match || [] }; }
+const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+const lowFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
+function programOf(){ return settings().program || null; }
+function needsSetup(){ return S.loaded && !programOf(); }
+function excluded(){ return settings().excluded || []; }
+// Données d'avant les programmes au choix (export version 2 ou plus ancien) : l'appli n'avait alors qu'un programme.
+// On complète les réglages pour que tout reste comme avant, sans rien effacer.
+function upgradeLegacy(){
+  if (programOf() || !S.docs.size) return;
+  const s = settings(); const plan = s.plan && typeof s.plan === 'object' ? s.plan : null;
+  const daysWith = f => DAY_ORDER.filter(wd => plan[wd] && f(plan[wd]));
+  // Le basket du lundi n'apparaissait que dans la note du jour, tant que le lundi gardait Upper A
+  const train = plan ? daysWith(d => d.label === 'Basket') : [1,4];
+  if (plan && plan[1] && plan[1].s === 'UA' && train.indexOf(1) < 0) train.unshift(1);
+  put('settings', Object.assign({}, s, { start: startDate(),
+    program:{ base:'exemple', name:PROGRAMS.exemple.name, days: plan ? daysWith(d => d.s) : PROGRAMS.exemple.days.slice() },
+    modules:{ knee:true, jumps:true, sport:true },
+    sport:{ name:'Basket', train, match: plan ? daysWith(d => d.label === 'Match') : [6] },
+    excluded: s.excluded || ['lib_bulgarian'] }));
+}
 function canon(id){ return ALIAS[id] || id; }
+function cueOf(base){
+  if (kneeOn() && base.cueKnee) return base.cueKnee;
+  if (sportOn() && base.cueSport) return base.cueSport.replace('{sport}', lowFirst(sportInfo().name));
+  return base.cue || '';
+}
 function exDef(id){
   id = canon(id);
   const base = BASE_EX[id]; const ov = S.docs.get('x_' + id);
   if (!base && !ov) return null;
   const e = Object.assign({ id, sets:3, lo:8, hi:12, rest:90, step:2.5, cat:'iso', muscles:M() }, base || {}, ov || {});
+  if (base && !(ov && ov.cue != null)) e.cue = cueOf(base);
+  delete e.cueKnee; delete e.cueSport;
   e.custom = !base;
   if (!e.muscles) e.muscles = M();
   return e;
@@ -430,21 +487,30 @@ function allEx(){
   S.docs.forEach((o, id) => { if (id.indexOf('x_') === 0) ids.add(id.slice(2)); });
   return [...ids].map(exDef).filter(e => e && !e.deleted).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 }
+// Exercices proposés dans les listes de choix : sans les exercices masqués, ni les sauts si le module détente est désactivé
+function offeredEx(){ const hid = excluded(); return allEx().filter(e => hid.indexOf(e.id) < 0 && (jumpsOn() || e.kind !== 'plyo')); }
+const isPlyo = it => { const e = exDef(it.ex); return !!e && e.kind === 'plyo'; };
 function tplDef(id){
   const ov = S.docs.get('p_' + id); const base = BASE_TPL[id];
   if (ov) return Object.assign({ id, builtin: !!base, edited: !!base }, clone(ov));
-  if (base) return Object.assign({ id, builtin:true, edited:false }, clone(base));
-  return null;
+  if (!base) return null;
+  const t = Object.assign({ id, builtin:true, edited:false }, clone(base));
+  if (!jumpsOn()) { t.items = t.items.filter(it => !isPlyo(it)); t.focus = t.focusNoJump || t.focus; t.cut = t.cutNoJump || t.cut; }
+  delete t.focusNoJump; delete t.cutNoJump;
+  return t;
 }
+// Séances du programme actif, puis séances créées par la personne
 function allTpl(){
-  const ids = Object.keys(BASE_TPL);
-  S.docs.forEach((o, id) => { if (id.indexOf('p_') === 0 && ids.indexOf(id.slice(2)) < 0) ids.push(id.slice(2)); });
+  const g = programOf(); const ids = g && PROGRAMS[g.base] ? PROGRAMS[g.base].tpls.slice() : [];
+  S.docs.forEach((o, id) => { const k = id.slice(2); if (id.indexOf('p_') === 0 && !BASE_TPL[k] && ids.indexOf(k) < 0) ids.push(k); });
   return ids.map(tplDef).filter(t => t && !t.deleted);
 }
-function tplLower(t){ return (t.items || []).some(it => { const e = exDef(it.ex); return e && (e.knee || e.cat === 'lower' || e.kind === 'plyo'); }); }
+// Exercices réellement faits : sans les sauts si le module détente est désactivé
+function tplItems(t){ return (t.items || []).filter(it => jumpsOn() || !isPlyo(it)); }
+function tplLower(t){ return tplItems(t).some(it => { const e = exDef(it.ex); return e && (e.knee || e.cat === 'lower' || e.kind === 'plyo'); }); }
 function tplEst(t){
   let sec = 0;
-  (t.items || []).forEach(it => { const e = exDef(it.ex); if (!e) return;
+  tplItems(t).forEach(it => { const e = exDef(it.ex); if (!e) return;
     if (e.kind === 'check') { sec += 480; return; }
     const sets = it.sets || e.sets || 3;
     if (e.kind === 'plyo') { sec += sets * 75; return; }
@@ -453,8 +519,25 @@ function tplEst(t){
   });
   return Math.round(sec / 60);
 }
-function planOf(){ const p = settings().plan; return p && typeof p === 'object' ? p : DEFAULT_PLAN; }
-function planDay(wd){ const p = planOf()[wd] || {}; const def = DEFAULT_PLAN[wd] || {}; const same = (p.s || null) === (def.s || null) && (p.label || null) === (def.label || null); return { s: p.s && tplDef(p.s) ? p.s : null, label: p.label || 'Repos', note: same ? DAY_NOTES[wd] : '' }; }
+// Répartit les séances du programme sur les jours choisis, dans l'ordre de la semaine
+function buildPlan(base, days){
+  const ids = PROGRAMS[base] ? PROGRAMS[base].tpls : []; const p = {}; let i = 0;
+  DAY_ORDER.forEach(wd => { p[wd] = days.indexOf(wd) >= 0 && ids.length ? { s: ids[i++ % ids.length] } : { label:'Repos' }; });
+  return p;
+}
+function planOf(){ const p = settings().plan; if (p && typeof p === 'object') return p; const g = programOf(); return g ? buildPlan(g.base, g.days || []) : {}; }
+function planDay(wd){
+  const p = planOf()[wd] || {}; let label = 'Repos';
+  if (sportOn()) { const sp = sportInfo(); if (sp.match.indexOf(wd) >= 0) label = 'Match'; else if (sp.train.indexOf(wd) >= 0) label = capFirst(sp.name); }
+  return { s: p.s && tplDef(p.s) ? p.s : null, label, note: dayNote(wd) };
+}
+function dayNote(wd){
+  const g = programOf(); if (!g || g.base !== 'exemple' || !sportOn()) return '';
+  const sp = sportInfo(); const same = (a, b) => a.slice().sort().join() === b.slice().sort().join();
+  if (!same(sp.train, [1,4]) || !same(sp.match, [6])) return '';
+  const p = planOf()[wd] || {}; const def = buildPlan('exemple', PROGRAMS.exemple.days)[wd];
+  return (p.s || null) === (def.s || null) ? DAY_NOTES[wd].replace('{Sport}', capFirst(sp.name)) : '';
+}
 function workouts(){
   const out = [];
   S.docs.forEach((o, id) => { if (id.indexOf('w_') === 0) out.push(Object.assign({}, o, { id })); });
@@ -475,15 +558,15 @@ function weekInfo(dateIso){
   const st = startDate();
   const n = Math.max(1, Math.floor(daysBetween(st, dateIso) / 7) + 1);
   const bw = ((n - 1) % 6) + 1; const wk = mondayOf(dateIso); const s = settings();
-  const forced = !!(s.deload && s.deload[wk]); const busy = !!(s.busy && s.busy[wk]);
+  const forced = !!(s.deload && s.deload[wk]); const busy = sportOn() && jumpsOn() && !!(s.busy && s.busy[wk]);
   return { n, bw, block: Math.floor((n - 1) / 6) + 1, deload: bw === 6 || forced, forced, busy, wk };
 }
 function weekGoal(w){
-  if (w.deload) return { t:'Décharge', d:(w.forced ? 'Décharge anticipée. ' : '') + 'Mêmes charges, environ 1/3 de séries en moins, 3-4 reps en réserve, moitié des sauts. Tu récupères pour repartir plus fort au bloc suivant.' };
+  if (w.deload) return { t:'Décharge', d:(w.forced ? 'Décharge anticipée. ' : '') + 'Mêmes charges, environ 1/3 de séries en moins, 3-4 reps en réserve' + (jumpsOn() ? ', moitié des sauts' : '') + '. Tu récupères pour repartir plus fort au bloc suivant.' };
   if (w.bw === 1) return w.block === 1
     ? { t:'Calibration', d:'Première semaine : trouve tes charges de travail en gardant 2-3 reps en réserve et note tes reps en réserve. L’appli calcule ensuite tes objectifs.' }
     : { t:'Reprise', d:'Retour après la décharge : reprends les charges de ta dernière semaine de progression, avec 2 reps en réserve.' };
-  if (w.bw === 5) return { t:'Fin de bloc', d:'Dernière semaine de progression avant la décharge : vise 1 rep en réserve, sauf sur les exercices qui sollicitent le genou (2 en réserve).' };
+  if (w.bw === 5) return { t:'Fin de bloc', d:'Dernière semaine de progression avant la décharge : vise 1 rep en réserve' + (kneeOn() ? ', sauf sur les exercices qui sollicitent le genou (2 en réserve).' : '.') };
   return { t:'Progression', d:'Suis l’objectif de chaque exercice : reps en plus ou nouvelle charge, selon tes reps en réserve de la dernière fois.' };
 }
 function kneeEntries(){
@@ -494,7 +577,7 @@ function kneeEntries(){
   });
   return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
-function kneeAlert(){ const lim = addDays(today(), -10); return kneeEntries().some(k => k.date >= lim && k.v > 3); }
+function kneeAlert(){ if (!kneeOn()) return false; const lim = addDays(today(), -10); return kneeEntries().some(k => k.date >= lim && k.v > 3); }
 function bodyDocs(){ const out = []; S.docs.forEach((o, id) => { if (id.indexOf('b_') === 0) out.push(Object.assign({ id }, o)); }); return out.sort((a, b) => a.date < b.date ? -1 : 1); }
 function bodyweight(){ const b = bodyDocs().filter(x => num(x.weight) > 0); return b.length ? num(b[b.length - 1].weight) : null; }
 function validSets(arr){ return (arr || []).filter(s => s && s.done && num(s.reps) > 0); }
@@ -518,13 +601,13 @@ const topSets = h => { const k = maxKg(h); return h.sets.filter(s => s.kg === k)
    règle « 2 pour 2 » de la NSCA, Plotkin et al. 2022 (progresser en reps ou en charge : résultats proches),
    Robinson et al. 2024 (hypertrophie meilleure plus près de l’échec), consensus de Bell et al. 2023 (décharge). */
 const PCT = { iso:[0.02, 0.05], upper:[0.025, 0.05], lower:[0.05, 0.10] };
-function targetRIR(e, wk){ if (e.cat === 'iso') return 1; if (wk && wk.bw === 5 && !e.knee) return 1; return 2; }
+function targetRIR(e, wk){ if (e.cat === 'iso') return 1; if (wk && wk.bw === 5 && !(e.knee && kneeOn())) return 1; return 2; }
 function computeTarget(e, wk, excludeId){
   const alert = kneeAlert(); const knee = !!e.knee && alert;
   if (e.kind === 'check') return { type:'check', label:'À faire', text:e.cue || '' };
   if (e.kind === 'plyo') {
     if (alert) return { type:'skip', label:'Suspendu', sets:0, text:'Genou au-dessus de 3/10 ces 10 derniers jours : pas de sauts pour l’instant.' };
-    if (wk.busy) return { type:'skip', label:'Pas cette semaine', sets:0, text:'Semaine chargée en basket : pas de sauts en salle.' };
+    if (wk.busy) return { type:'skip', label:'Pas cette semaine', sets:0, text:'Semaine chargée en ' + lowFirst(sportInfo().name) + ' : pas de sauts en salle.' };
     const n = wk.deload ? Math.max(1, Math.ceil(e.sets / 2)) : e.sets;
     return { type: e.optional ? 'opt' : 'plyo', label: wk.deload ? 'Décharge' : (e.optional ? 'Optionnel' : 'Sauts'), sets:n, reps:e.lo,
       text: wk.deload ? 'Semaine de décharge : moitié des séries.' : (e.optional ? (e.cue || '') : 'Qualité avant quantité : chaque saut au maximum, arrête si la hauteur baisse.') };
@@ -622,7 +705,7 @@ function startWorkout(tplId){
   const date = today(); const wk = weekInfo(date);
   if (!settings().start) putSettings({});
   const id = 'w_' + date.replace(/-/g, '') + '_' + rid();
-  const items = (t.items || []).map(it => { const e = exDef(it.ex); return e ? snapItem(e, it) : null; }).filter(Boolean);
+  const items = tplItems(t).map(it => { const e = exDef(it.ex); return e ? snapItem(e, it) : null; }).filter(Boolean);
   const w = { date, tpl:tplId, name:t.name, cut:t.cut || '', lower:tplLower(t), est:tplEst(t), status:'en_cours', startedAt:Date.now(), week:wk.n, blockWeek:wk.bw, deload:wk.deload, items, ex:{}, targets:{} };
   items.forEach(it => initItem(w, it, wk));
   put(id, w);
@@ -674,7 +757,7 @@ function muscleDone(from, to){
 function musclePlanned(){
   const m = {}; MUSCLES.forEach(x => { m[x] = 0; });
   DAY_ORDER.forEach(wd => { const p = planDay(wd); if (!p.s) return; const t = tplDef(p.s); if (!t) return;
-    (t.items || []).forEach(it => { const e = exDef(it.ex); if (!e || e.kind === 'plyo' || e.kind === 'check') return; const n = it.sets || e.sets || 0;
+    tplItems(t).forEach(it => { const e = exDef(it.ex); if (!e || e.kind === 'plyo' || e.kind === 'check') return; const n = it.sets || e.sets || 0;
       (e.muscles.p || []).forEach(x => { if (m[x] != null) m[x] += n; }); (e.muscles.s || []).forEach(x => { if (m[x] != null) m[x] += n * 0.5; }); }); });
   return m;
 }
@@ -748,7 +831,7 @@ function blockReport(block){
   if (up.length) tips.push(['good', 'Progrès sur ' + up.length + ' exercice' + (up.length > 1 ? 's' : '') + ', le meilleur : ' + up[0].name + ' (+' + fmtKg(Math.round(up[0].pct * 10) / 10) + ' %).']);
   const low = MUSCLES.filter(m => mp[m] >= 3 && avg[m] < mp[m] * 0.6);
   if (low.length) tips.push(['warn', 'Volume nettement sous le prévu pour : ' + low.join(', ') + '. Ce sont souvent les exercices coupés en fin de séance ; place-les plus tôt ou raccourcis autre chose.']);
-  if (kneeMax != null) {
+  if (kneeOn() && kneeMax != null) {
     if (kneeHigh > 0) tips.push(['bad', 'Genou : ' + kneeHigh + ' jour' + (kneeHigh > 1 ? 's' : '') + ' au-dessus de 3/10 (max ' + kneeMax + '/10). Garde une amplitude confortable sur les exercices sensibles ; si ça se répète, fais évaluer ton genou par un kiné.']);
     else if (knee.length >= 5) tips.push(['good', 'Genou stable sous 3/10 tout le bloc : tu peux continuer à élargir l’amplitude au leg extension et garder les sauts.']);
   }
@@ -759,7 +842,7 @@ function blockReport(block){
       : ['good', 'Poids en hausse de ' + fmtKg(Math.round(p * 100) / 100) + ' % par semaine : dans la cible de 0,25 à 0,5 % pour prendre du muscle.']);
   }
   if (sleepAvg != null && sleepAvg < 7) tips.push(['info', 'Sommeil moyen ' + fmtKg(Math.round(sleepAvg * 10) / 10) + ' h' + (shortN ? ', dont ' + shortN + ' nuit' + (shortN > 1 ? 's' : '') + ' sous 6 h' : '') + '. Les recommandations pour les adultes visent au moins 7 h.']);
-  if (test && prevTest) { const dlt = test.cm - prevTest.cm; tips.push([dlt >= 0 ? 'good' : 'warn', 'Détente : ' + fmtKg(test.cm) + ' cm contre ' + fmtKg(prevTest.cm) + ' cm au bloc précédent (' + (dlt >= 0 ? '+' : '') + fmtKg(Math.round(dlt * 10) / 10) + ' cm).']); }
+  if (jumpsOn() && test && prevTest) { const dlt = test.cm - prevTest.cm; tips.push([dlt >= 0 ? 'good' : 'warn', 'Détente : ' + fmtKg(test.cm) + ' cm contre ' + fmtKg(prevTest.cm) + ' cm au bloc précédent (' + (dlt >= 0 ? '+' : '') + fmtKg(Math.round(dlt * 10) / 10) + ' cm).']); }
   return { block, r, to, finished, weeks, done, planned, forces, avg, mp, kneeMax, kneeHigh, kneeN:knee.length, wc, sleepAvg, shortN, test, prevTest, tips };
 }
 
@@ -862,9 +945,11 @@ function renderTabs(){
   else { m.className = 'pill warn'; m.textContent = 'Sur cet appareil'; }
 }
 function render(){
+  if (needsSetup() && !S.setup) S.setup = newSetup('welcome');
   renderTabs();
+  $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view;
-  $('#app').innerHTML = S.picker ? viewPicker() : S.draft ? viewDraft() : S.bilan ? viewBilan(S.bilan)
+  $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.bilan ? viewBilan(S.bilan)
     : v === 'session' ? viewSession() : v === 'progress' ? viewProgress() : v === 'history' ? viewHistory() : v === 'program' ? viewProgram() : viewToday();
   if (v === 'session' && activeWorkout()) ensureTick();
 }
@@ -880,8 +965,9 @@ function viewToday(){
   const wk = weekInfo(d); const goal = weekGoal(wk);
   const ws = workouts(); const aw = S.loaded && activeWorkout();
   const doneToday = ws.filter(w => w.date === d && w.status === 'terminée');
-  let h = '<div class="stack"><span class="hero-date">' + esc(fmtDateLong(d)) + '</span>';
-  h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">Basket chargé</span>' : '') + '</div></div>';
+  const who = String(settings().name || '').trim();
+  let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' : '') + esc(fmtDateLong(d)) + '</span>';
+  h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span>' : '') + '</div></div>';
   if (S.summary) {
     const sw = S.docs.get(S.summary.id);
     h += '<section class="card" style="border-color:var(--good)"><div class="row between"><h2>Séance enregistrée</h2><button type="button" class="link" data-act="close-summary">Fermer</button></div>';
@@ -892,8 +978,8 @@ function viewToday(){
   if (S.loaded) {
     const fat = fatigueCheck();
     if (fat) h += '<section class="card" style="border-color:var(--warn)"><h3>Fatigue probable</h3><p class="small">Baisse de force sur ' + fat.drops.length + ' exercices sur ' + fat.compared + ' cette semaine : ' + esc(fat.drops.join(', ')) + '.' + (fat.avgSleep != null && fat.avgSleep < 7 ? ' Ton sommeil moyen ces derniers jours est de ' + fmtKg(Math.round(fat.avgSleep * 10) / 10) + ' h.' : '') + ' Avancer la semaine de décharge peut t’aider à récupérer.</p><div class="row"><button type="button" class="btn primary" data-act="fatigue-deload">Avancer la décharge</button><button type="button" class="btn" data-act="fatigue-ignore">Ignorer cette semaine</button></div></section>';
-    if (wk.bw === 6 && !testForBlock(wk.block)) h += '<div class="alert info">Test de détente cette semaine : il s’affichera au début de ta prochaine séance jambes. La décharge te laisse reposé, c’est le bon moment.</div>';
-    else if (wk.bw === 5) h += '<div class="alert info">Test de détente la semaine prochaine, pendant la décharge.</div>';
+    if (jumpsOn() && wk.bw === 6 && !testForBlock(wk.block)) h += '<div class="alert info">Test de détente cette semaine : il s’affichera au début de ta prochaine séance jambes. La décharge te laisse reposé, c’est le bon moment.</div>';
+    else if (jumpsOn() && wk.bw === 5) h += '<div class="alert info">Test de détente la semaine prochaine, pendant la décharge.</div>';
     const bb = wk.bw === 6 ? wk.block : (wk.bw === 1 && wk.block > 1 ? wk.block - 1 : 0);
     if (bb) h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>Bilan du bloc ' + bb + '</h3><span class="muted small">Force, régularité, volume, genou, poids, sommeil et détente, avec des pistes pour la suite.</span></div><button type="button" class="btn" data-act="bilan" data-v="' + bb + '">Voir</button></div></section>';
   }
@@ -913,7 +999,9 @@ function viewToday(){
     h += '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (plan.note ? '<p class="muted">' + esc(plan.note) + '</p>' : '') + (next ? '<p class="small">Prochaine séance : <b>' + esc(next.t.name) + '</b>, ' + esc(withDot(fmtDateLong(next.d))) + '</p>' : '') + '</section>';
   }
   // Choisir une autre séance
-  h += '<section class="card"><h3>Faire une autre séance</h3><p class="muted small">N’importe quel jour, les objectifs sont calculés pareil.</p><div class="row">' + allTpl().map(t => '<button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
+  const tpls = allTpl();
+  if (S.loaded && !tpls.length) h += noTplCard();
+  else h += '<section class="card"><h3>Faire une autre séance</h3><p class="muted small">N’importe quel jour, les objectifs sont calculés pareil.</p><div class="row">' + tpls.map(t => '<button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
 
   // Semaine
   const mon = mondayOf(d);
@@ -922,7 +1010,7 @@ function viewToday(){
     const day = addDays(mon, i); const p = planDay(wdx);
     const done = ws.filter(w => w.date === day && w.status === 'terminée');
     const lbl = p.s ? tplDef(p.s).name : p.label;
-    h += '<div class="day' + (day === d ? ' today' : '') + (done.length ? ' done' : '') + '"><span class="d">' + DAY_SHORT[wdx] + '</span><span class="s">' + esc(lbl) + '</span><span class="k">' + (done.length ? 'Fait' : (p.s ? 'Salle' : (p.label === 'Repos' ? '—' : 'Basket'))) + '</span></div>';
+    h += '<div class="day' + (day === d ? ' today' : '') + (done.length ? ' done' : '') + '"><span class="d">' + DAY_SHORT[wdx] + '</span><span class="s">' + esc(lbl) + '</span><span class="k">' + (done.length ? 'Fait' : (p.s ? 'Salle' : (p.label === 'Repos' ? '—' : esc(capFirst(sportInfo().name))))) + '</span></div>';
   });
   h += '</div></section>';
 
@@ -934,17 +1022,18 @@ function viewToday(){
 
   // Genou
   const k = S.docs.get('k_' + d);
-  h += '<section class="card"><div class="stack"><h3>Genou ce matin</h3><p class="muted small">Douleur en montant les escaliers, de 0 à 10. Au-dessus de 3, l’appli suspend les sauts et maintient les charges.</p></div>' + kneeChips(k ? k.stairs : null, 'stairs', !S.loaded) + '</section>';
+  if (kneeOn()) h += '<section class="card"><div class="stack"><h3>Genou ce matin</h3><p class="muted small">Douleur en montant les escaliers, de 0 à 10. Au-dessus de 3, l’appli suspend les sauts et maintient les charges.</p></div>' + kneeChips(k ? k.stairs : null, 'stairs', !S.loaded) + '</section>';
 
   h += '<section class="card"><h3>Cette semaine</h3>';
-  h += '<label class="toggle"><input type="checkbox" id="busy-week" data-act="busy"' + (wk.busy ? ' checked' : '') + (S.loaded ? '' : ' disabled') + '><span><b>Semaine chargée en basket</b><br><span class="muted small">Séance ou match en plus : pas de sauts en salle cette semaine.</span></span></label>';
-  h += '<label class="toggle"><input type="checkbox" id="deload-week" data-act="deload"' + (wk.forced ? ' checked' : '') + (S.loaded && wk.bw !== 6 ? '' : ' disabled') + '><span><b>Décharge anticipée</b><br><span class="muted small">' + (wk.bw === 6 ? 'C’est déjà ta semaine de décharge.' : 'Fatigue accumulée ou genou qui réagit : mêmes charges, environ 1/3 de séries en moins.') + '</span></span></label></section>';
+  if (sportOn() && jumpsOn()) h += '<label class="toggle"><input type="checkbox" id="busy-week" data-act="busy"' + (wk.busy ? ' checked' : '') + (S.loaded ? '' : ' disabled') + '><span><b>Semaine chargée en ' + esc(lowFirst(sportInfo().name)) + '</b><br><span class="muted small">Séance ou match en plus : pas de sauts en salle cette semaine.</span></span></label>';
+  h += '<label class="toggle"><input type="checkbox" id="deload-week" data-act="deload"' + (wk.forced ? ' checked' : '') + (S.loaded && wk.bw !== 6 ? '' : ' disabled') + '><span><b>Décharge anticipée</b><br><span class="muted small">' + (wk.bw === 6 ? 'C’est déjà ta semaine de décharge.' : 'Fatigue accumulée' + (kneeOn() ? ' ou genou qui réagit' : '') + ' : mêmes charges, environ 1/3 de séries en moins.') + '</span></span></label></section>';
   return h;
 }
 
 /* ---------- Séance ---------- */
 function viewSession(){
   const w = S.loaded && activeWorkout();
+  if (!w && S.loaded && !allTpl().length) return noTplCard();
   if (!w) return '<section class="card"><h2>Pas de séance en cours</h2><p class="muted">Choisis la séance à faire. Les objectifs de chaque exercice sont calculés à partir de tes dernières séances.</p><div class="row">' +
     allTpl().map(t => '<button type="button" class="btn primary" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
   const items = itemsOf(w);
@@ -955,7 +1044,7 @@ function viewSession(){
   h += '<div class="bar" aria-label="Avancement"><i style="width:' + pct + '%"></i></div><span class="muted small">' + done + '/' + total + ' séries validées</span></div>';
   const b = S.docs.get('b_' + w.date) || {};
   if (num(b.sleep) != null && num(b.sleep) < 6) h += '<div class="alert info">Nuit courte (' + fmtKg(num(b.sleep)) + ' h) : vise les objectifs, mais garde 1 rep de plus en réserve et ne force pas de record aujourd’hui.</div>';
-  if (w.lower && testDue(w.date)) {
+  if (w.lower && jumpsOn() && testDue(w.date)) {
     h += '<section class="card" style="border-color:var(--court)"><div class="stack" style="gap:4px"><h3>Test de détente du bloc ' + weekInfo(w.date).block + '</h3><p class="small">' + esc(JUMP_PROTOCOL) + '</p></div>';
     h += '<div class="fields">' + [0,1,2].map(i => '<label class="f"><span>Essai ' + (i + 1) + ' (cm)</span><input class="n" id="jump-' + i + '" inputmode="decimal" placeholder="cm"></label>').join('') + '</div>';
     const prevT = testForBlock(weekInfo(w.date).block - 1);
@@ -973,7 +1062,7 @@ function viewSession(){
     } else { h += exCard(it, w, i); i++; }
   }
   h += '<button type="button" class="btn" data-act="pick-add">+ Ajouter un exercice à cette séance</button>';
-  if (w.lower) h += '<section class="card"><h3>Genou pendant la séance</h3><p class="muted small">Douleur maximale ressentie, de 0 à 10.</p>' + kneeChips(w.knee == null ? null : w.knee, 'knee') + '</section>';
+  if (w.lower && kneeOn()) h += '<section class="card"><h3>Genou pendant la séance</h3><p class="muted small">Douleur maximale ressentie, de 0 à 10.</p>' + kneeChips(w.knee == null ? null : w.knee, 'knee') + '</section>';
   h += '<section class="card"><h3>Notes</h3><textarea id="notes-' + w.id + '" data-f="notes" placeholder="Sensations, réglages de machine, ce qui a gêné…">' + esc(w.notes || '') + '</textarea></section>';
   h += '<button type="button" class="btn primary big" data-act="finish">Terminer la séance</button>';
   h += S.confirm === 'abandon' ? '<button type="button" class="btn danger big" data-act="abandon-yes">Confirmer : supprimer cette séance</button>' : '<button type="button" class="btn ghost big" data-act="abandon">Abandonner la séance</button>';
@@ -1029,7 +1118,7 @@ function pickerList(){
   if (P.mode === 'replace') { const w = activeWorkout(); const it = w && itemsOf(w)[P.idx]; ref = it ? (exDef(it.ex) || it) : null; }
   const exclude = new Set();
   if (P.mode === 'replace' || P.mode === 'add') { const w = activeWorkout(); if (w) Object.keys(w.ex).forEach(k => exclude.add(canon(k))); }
-  let list = allEx().filter(e => !exclude.has(e.id) && (!q || e.name.toLowerCase().indexOf(q) >= 0 || (e.muscles.p || []).join(' ').toLowerCase().indexOf(q) >= 0));
+  let list = offeredEx().filter(e => !exclude.has(e.id) && (!q || e.name.toLowerCase().indexOf(q) >= 0 || (e.muscles.p || []).join(' ').toLowerCase().indexOf(q) >= 0));
   const score = e => { if (!ref || !ref.muscles) return 0; let s = 0; (ref.muscles.p || []).forEach(x => { if ((e.muscles.p || []).indexOf(x) >= 0) s += 3; else if ((e.muscles.s || []).indexOf(x) >= 0) s += 1; }); if (e.kind === ref.kind) s += 0.5; return s; };
   list = list.map(e => ({ e, s:score(e) })).sort((a, b) => b.s - a.s || a.e.name.localeCompare(b.e.name, 'fr'));
   const row = x => '<button type="button" class="pick" data-act="pick" data-v="' + esc(x.e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(x.e.name) + '</span><span class="m">' + esc(KINDS[x.e.kind] || '') + ((x.e.muscles.p || []).length ? ' · ' + x.e.muscles.p.join(', ') : '') + (x.e.custom ? ' · perso' : '') + '</span></span><span aria-hidden="true">›</span></button>';
@@ -1132,10 +1221,11 @@ function viewProgress(){
 
   // Genou
   const ke = kneeEntries();
-  h += '<section class="card"><h3>Genou</h3><p class="muted small">Escaliers le matin (orange) et douleur max pendant les séances jambes (bleu). La ligne rouge marque 3/10.</p>' +
+  if (kneeOn()) h += '<section class="card"><h3>Genou</h3><p class="muted small">Escaliers le matin (courbe) et douleur max pendant les séances jambes (points bleus). La ligne pointillée marque 3/10.</p>' +
     chart([{ pts: ke.filter(k => k.src === 'stairs').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })) }, { pts: ke.filter(k => k.src === 'session').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })), color:'var(--court)', line:false }], { yMin:0, yMax:10, thresh:3, threshLabel:'3/10', area:false, label:'Douleur au genou', empty:'Note la douleur aux escaliers dans Aujourd’hui.' }) + '</section>';
 
   // Détente
+  if (!jumpsOn()) return h;
   const tests = []; S.docs.forEach((o, id) => { if (id.indexOf('t_') === 0) tests.push(Object.assign({ id }, o)); });
   tests.sort((a, b) => a.date < b.date ? -1 : 1);
   h += '<section class="card"><h3>Tests de détente</h3><p class="muted small">Un test par bloc, pendant la semaine de décharge : il s’affiche au début de ta séance jambes. ' + esc(JUMP_PROTOCOL) + '</p>' + (testForBlock(wk.block) ? '<p class="small">Test du bloc ' + wk.block + ' fait.</p>' : '<p class="small">Prochain test : semaine du ' + esc(withDot(fmtDate(addDays(blockRange(wk.block).from, 35)))) + '</p>') +
@@ -1152,8 +1242,8 @@ function viewBilan(block){
   let h = '<div class="row between"><h1>Bilan du bloc ' + block + '</h1><button type="button" class="link" data-act="bilan-close">Retour</button></div>';
   h += '<p class="muted">' + esc(fmtDate(R.r.from)) + ' – ' + esc(fmtDate(R.r.to)) + (R.finished ? '' : ' · en cours, ' + R.weeks + ' semaine' + (R.weeks > 1 ? 's' : '') + ' écoulée' + (R.weeks > 1 ? 's' : '')) + '</p>';
   const avgF = R.forces.length ? R.forces.reduce((a, f) => a + f.pct, 0) / R.forces.length : null;
-  h += '<div class="stats"><div class="stat"><span class="v num">' + R.done.length + '<span class="small muted">/' + R.planned + '</span></span><span class="l">séances faites</span></div><div class="stat"><span class="v num">' + (avgF == null ? '—' : (avgF >= 0 ? '+' : '') + fmtKg(Math.round(avgF * 10) / 10) + '%') + '</span><span class="l">force moyenne</span></div><div class="stat"><span class="v num">' + (R.test ? fmtKg(R.test.cm) : '—') + '</span><span class="l">détente (cm)</span></div></div>';
-  h += '<section class="card"><h3>Pistes pour la suite</h3>' + (R.tips.length ? R.tips.map(t => '<div class="alert ' + (t[0] === 'bad' ? '' : t[0]) + '" style="font-weight:500">' + esc(t[1]) + '</div>').join('') : '<p class="muted small">Pas encore assez de données : continue de noter tes séances, ton genou, ton poids et ton sommeil.</p>') + '<p class="muted small">Ce sont des pistes calculées à partir de tes données, à ajuster avec ton ressenti.</p></section>';
+  h += '<div class="stats"><div class="stat"><span class="v num">' + R.done.length + '<span class="small muted">/' + R.planned + '</span></span><span class="l">séances faites</span></div><div class="stat"><span class="v num">' + (avgF == null ? '—' : (avgF >= 0 ? '+' : '') + fmtKg(Math.round(avgF * 10) / 10) + '%') + '</span><span class="l">force moyenne</span></div>' + (jumpsOn() ? '<div class="stat"><span class="v num">' + (R.test ? fmtKg(R.test.cm) : '—') + '</span><span class="l">détente (cm)</span></div>' : '<div class="stat"><span class="v num">' + R.weeks + '</span><span class="l">semaine' + (R.weeks > 1 ? 's' : '') + '</span></div>') + '</div>';
+  h += '<section class="card"><h3>Pistes pour la suite</h3>' + (R.tips.length ? R.tips.map(t => '<div class="alert ' + (t[0] === 'bad' ? '' : t[0]) + '" style="font-weight:500">' + esc(t[1]) + '</div>').join('') : '<p class="muted small">Pas encore assez de données : continue de noter tes séances' + (kneeOn() ? ', ton genou' : '') + ', ton poids et ton sommeil.</p>') + '<p class="muted small">Ce sont des pistes calculées à partir de tes données, à ajuster avec ton ressenti.</p></section>';
   h += '<section class="card"><h3>Force par exercice</h3><p class="muted small">Force estimée (Epley) à la première et à la dernière séance du bloc, hors décharge. Il faut au moins 2 séances par exercice.</p>';
   h += R.forces.length ? '<div class="scroll"><table class="tbl"><thead><tr><th>Exercice</th><th>Début</th><th>Fin</th><th>Écart</th></tr></thead><tbody>' + R.forces.map(f => '<tr><td>' + esc(f.name) + '</td><td class="num">' + fmtKg(Math.round(f.from)) + (f.unit === 'reps' ? ' reps' : '') + '</td><td class="num">' + fmtKg(Math.round(f.to)) + (f.unit === 'reps' ? ' reps' : '') + '</td><td class="num" style="color:var(--' + (f.pct >= 1 ? 'good' : f.pct <= -2.5 ? 'bad' : 'muted') + ')">' + (f.pct >= 0 ? '+' : '') + fmtKg(Math.round(f.pct * 10) / 10) + ' %</td></tr>').join('') + '</tbody></table></div>' : '<p class="empty">Pas encore 2 séances sur le même exercice dans ce bloc.</p>';
   h += '</section>';
@@ -1161,11 +1251,11 @@ function viewBilan(block){
   h += '<section class="card"><h3>Séries par muscle (moyenne par semaine)</h3><div class="legend"><span><i style="background:var(--accent)"></i>Moyenne faite</span><span><i style="background:var(--court)"></i>Prévu par semaine</span></div>';
   MUSCLES.forEach(m => { h += '<div class="mrow"><span>' + esc(m) + '</span><span class="mbar"><i style="width:' + (R.avg[m] / maxV * 100).toFixed(1) + '%"></i><b style="left:' + (R.mp[m] / maxV * 100).toFixed(1) + '%"></b></span><span class="v num">' + fmtKg(Math.round(R.avg[m] * 10) / 10) + ' / ' + fmtKg(R.mp[m]) + '</span></div>'; });
   h += '</section>';
-  h += '<section class="card"><h3>Genou, poids et sommeil</h3><div class="stack small">';
-  h += '<p><b>Genou :</b> ' + (R.kneeMax == null ? 'aucune mesure.' : R.kneeN + ' mesures, max ' + R.kneeMax + '/10, ' + R.kneeHigh + ' jour(s) au-dessus de 3/10.') + '</p>';
+  h += '<section class="card"><h3>' + (kneeOn() ? 'Genou, poids et sommeil' : 'Poids et sommeil') + '</h3><div class="stack small">';
+  if (kneeOn()) h += '<p><b>Genou :</b> ' + (R.kneeMax == null ? 'aucune mesure.' : R.kneeN + ' mesures, max ' + R.kneeMax + '/10, ' + R.kneeHigh + ' jour(s) au-dessus de 3/10.') + '</p>';
   h += '<p><b>Poids :</b> ' + (R.wc ? fmtKg(R.wc.from) + ' → ' + fmtKg(R.wc.to) + ' kg (' + (R.wc.kg >= 0 ? '+' : '') + fmtKg(Math.round(R.wc.kg * 10) / 10) + ' kg, ' + fmtKg(Math.round(R.wc.pctWeek * 100) / 100) + ' % par semaine).' : 'il faut au moins 2 pesées dans le bloc.') + '</p>';
   h += '<p><b>Sommeil :</b> ' + (R.sleepAvg == null ? 'aucune donnée.' : 'moyenne ' + fmtKg(Math.round(R.sleepAvg * 10) / 10) + ' h, ' + R.shortN + ' nuit(s) sous 6 h.') + '</p>';
-  h += '<p><b>Détente :</b> ' + (R.test ? fmtKg(R.test.cm) + ' cm' + (R.prevTest ? ' (bloc précédent : ' + fmtKg(R.prevTest.cm) + ' cm)' : '') : 'pas de test dans ce bloc.') + '</p>';
+  if (jumpsOn()) h += '<p><b>Détente :</b> ' + (R.test ? fmtKg(R.test.cm) + ' cm' + (R.prevTest ? ' (bloc précédent : ' + fmtKg(R.prevTest.cm) + ' cm)' : '') : 'pas de test dans ce bloc.') + '</p>';
   h += '</div></section>';
   return h;
 }
@@ -1210,46 +1300,81 @@ function viewProgram(){
   if (S.progTab === 'science') return h + viewScience();
   return h + viewTemplates();
 }
+function programCard(){
+  const g = programOf() || {}; const base = PROGRAMS[g.base];
+  let h = '<section class="card"><span class="label">Ton programme</span>';
+  h += S.renaming
+    ? '<div class="row"><input class="plain" id="prog-name" value="' + esc(g.name || '') + '" aria-label="Nom du programme" style="flex:1;width:auto;min-width:0"><button type="button" class="btn primary" data-act="prog-rename-save">Enregistrer</button></div>'
+    : '<div class="row between"><h2>' + esc(g.name || 'Mon programme') + '</h2><button type="button" class="link" data-act="prog-rename">Renommer</button></div>';
+  h += '<p class="muted small">' + esc(base ? base.desc : 'Ton propre programme : crée tes séances et mets-y les exercices que tu veux.') + '</p>';
+  return h + '<button type="button" class="btn" data-act="prog-change">Changer de programme</button></section>';
+}
+function noTplCard(){
+  return '<section class="card"><h2>Crée ta première séance</h2><p class="muted">Donne-lui un nom, puis ajoute les exercices que tu veux. S’il en manque un, tu peux le créer depuis la liste.</p><button type="button" class="btn primary big" data-act="go-new-tpl">Créer une séance</button></section>';
+}
 function viewTemplates(){
-  let h = '<button type="button" class="btn primary" data-act="new-tpl">+ Créer une séance</button>';
+  let h = programCard() + '<button type="button" class="btn primary" data-act="new-tpl">+ Créer une séance</button>';
   allTpl().forEach(t => {
-    h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>' + esc(t.name) + '</h3><span class="muted small">' + esc(t.focus || '') + (t.focus ? ' · ' : '') + t.items.length + ' exercices · environ ' + tplEst(t) + ' min' + (t.edited ? ' · modifiée' : '') + (!t.builtin ? ' · perso' : '') + '</span></div></div>';
-    h += '<p class="small muted">' + esc(t.items.map(it => { const e = exDef(it.ex); return e ? e.name : '?'; }).join(' · ')) + '</p>';
+    const its = tplItems(t);
+    h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>' + esc(t.name) + '</h3><span class="muted small">' + esc(t.focus || '') + (t.focus ? ' · ' : '') + its.length + ' exercices · environ ' + tplEst(t) + ' min' + (t.edited ? ' · modifiée' : '') + (!t.builtin ? ' · perso' : '') + '</span></div></div>';
+    h += '<p class="small muted">' + esc(its.map(it => { const e = exDef(it.ex); return e ? e.name : '?'; }).join(' · ')) + '</p>';
     h += '<div class="row"><button type="button" class="btn sm" data-act="edit-tpl" data-v="' + esc(t.id) + '">Modifier</button><button type="button" class="btn sm" data-act="start" data-v="' + esc(t.id) + '">Commencer</button></div></section>';
   });
   return h;
 }
 function viewExercises(){
   let h = '<button type="button" class="btn primary" data-act="new-ex">+ Ajouter un exercice</button><p class="muted small">Les exercices ajoutés sont disponibles dans toutes les séances et pour « Remplacer ».</p>';
-  const groups = {}; allEx().forEach(e => { const g = e.kind === 'plyo' ? 'Pliométrie' : e.kind === 'check' ? 'Autres' : ((e.muscles.p || [])[0] || 'Autres'); (groups[g] = groups[g] || []).push(e); });
-  [...MUSCLES, 'Pliométrie', 'Autres'].forEach(g => {
+  const hid = excluded(); const groups = {};
+  allEx().forEach(e => { if (e.kind === 'plyo' && !jumpsOn()) return; const g = hid.indexOf(e.id) >= 0 ? 'Masqués' : e.kind === 'plyo' ? 'Pliométrie' : e.kind === 'check' ? 'Autres' : ((e.muscles.p || [])[0] || 'Autres'); (groups[g] = groups[g] || []).push(e); });
+  [...MUSCLES, 'Pliométrie', 'Autres', 'Masqués'].forEach(g => {
     if (!groups[g]) return;
-    h += '<section class="card"><h3>' + esc(g) + '</h3>' + groups[g].map(e => '<button type="button" class="pick" data-act="edit-ex" data-v="' + esc(e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(e.name) + '</span><span class="m">' + esc(KINDS[e.kind] || '') + (e.kind === 'load' || e.kind === 'bw' ? ' · ' + e.sets + ' × ' + e.lo + '-' + e.hi + ' · palier ' + fmtKg(e.step) + ' kg' : '') + (e.custom ? ' · perso' : '') + '</span></span><span aria-hidden="true">›</span></button>').join('') + '</section>';
+    h += '<section class="card"><h3>' + esc(g) + '</h3>' + (g === 'Masqués' ? '<p class="muted small">Plus proposés quand tu ajoutes ou remplaces un exercice.</p>' : '') + groups[g].map(e => '<button type="button" class="pick" data-act="edit-ex" data-v="' + esc(e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(e.name) + '</span><span class="m">' + esc(KINDS[e.kind] || '') + (e.kind === 'load' || e.kind === 'bw' ? ' · ' + e.sets + ' × ' + e.lo + '-' + e.hi + ' · palier ' + fmtKg(e.step) + ' kg' : '') + (e.custom ? ' · perso' : '') + '</span></span><span aria-hidden="true">›</span></button>').join('') + '</section>';
   });
   return h;
 }
 function viewPlanning(){
-  const tpls = allTpl();
+  const tpls = allTpl(); const g = programOf() || {};
   let h = '<section class="card"><h3>Planning de la semaine</h3><p class="muted small">Sert au rappel du jour, à la séance proposée et aux séries prévues par muscle. Tu peux toujours faire une autre séance n’importe quel jour.</p>';
+  if (!tpls.length) h += '<p class="small">Crée d’abord tes séances dans l’onglet Séances, puis choisis-les ici.</p>';
   DAY_ORDER.forEach(wd => {
-    const p = planDay(wd); const val = p.s ? 's:' + p.s : 'l:' + p.label;
-    h += '<label class="f"><span>' + esc(WEEKDAYS[wd]) + '</span><select data-plan="' + wd + '">' +
-      tpls.map(t => '<option value="s:' + esc(t.id) + '"' + (val === 's:' + t.id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') +
-      DAY_LABELS.map(l => '<option value="l:' + l + '"' + (val === 'l:' + l ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>';
+    const p = planDay(wd);
+    h += '<label class="f"><span>' + esc(WEEKDAYS[wd]) + (p.label !== 'Repos' ? ' · ' + esc(p.label) : '') + '</span><select data-plan="' + wd + '">' +
+      tpls.map(t => '<option value="s:' + esc(t.id) + '"' + (p.s === t.id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('') +
+      '<option value="l:Repos"' + (p.s ? '' : ' selected') + '>Pas de séance</option></select></label>';
   });
-  h += '<button type="button" class="link" data-act="reset-plan">Revenir au planning d’origine</button></section>';
-  return h;
+  if (sportOn()) h += '<p class="muted small">Les jours de ' + esc(lowFirst(sportInfo().name)) + ' et de match se règlent dans Réglages.</p>';
+  if (PROGRAMS[g.base]) h += '<button type="button" class="link" data-act="reset-plan">Revenir au planning d’origine</button>';
+  return h + '</section>';
 }
 function viewSettings(){
   const s = settings();
-  let h = '<section class="card"><h3>Début du programme</h3><p class="muted small">Sert à calculer la semaine du bloc de 6 semaines (5 de progression, 1 de décharge). Choisis le lundi de ta première semaine.</p><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></section>';
+  let h = '<section class="card"><h3>Ton prénom</h3><label class="f"><span>Prénom</span><input id="set-name" value="' + esc(s.name || '') + '" placeholder="Facultatif" autocomplete="given-name"></label></section>';
+  h += '<section class="card"><h3>Début du programme</h3><p class="muted small">Sert à calculer la semaine du bloc de 6 semaines (5 de progression, 1 de décharge). Choisis le lundi de ta première semaine.</p><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></section>';
   h += '<section class="card"><h3>Taille</h3><label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label></section>';
+  h += optionsCard();
+  const hid = excluded().map(exDef).filter(Boolean);
+  h += '<section class="card"><h3>Exercices masqués</h3><p class="muted small">Ils ne sont plus proposés quand tu ajoutes ou remplaces un exercice. Les séances qui les contiennent ne changent pas.</p>';
+  h += hid.length ? hid.map(e => '<div class="row between"><span>' + esc(e.name) + '</span><button type="button" class="btn sm" data-act="ex-unhide" data-v="' + esc(e.id) + '">Afficher à nouveau</button></div>').join('') : '<p class="small">Aucun. Pour masquer un exercice, ouvre-le dans Programme › Exercices.</p>';
+  h += '</section>';
   h += '<section class="card"><h3>Tes données</h3><p class="small">Les séances sont enregistrées seulement dans ce navigateur. Exporte-les régulièrement.</p>';
   h += '<div class="row"><button type="button" class="btn" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
   if (useShare('json')) h += '<p class="muted small">«&nbsp;Exporter&nbsp;» ouvre le menu de partage&nbsp;: choisis «&nbsp;Enregistrer dans Fichiers&nbsp;» pour garder une copie, ou envoie le fichier.</p>';
   h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
   h += '</section>';
   return h;
+}
+function optionsCard(){
+  const m = mods(); const sp = sportInfo(); const raw = settings().sport || {};
+  const tog = (k, title, desc) => '<label class="toggle"><input type="checkbox" id="mod-' + k + '" data-act="mod" data-v="' + k + '"' + (m[k] ? ' checked' : '') + '><span><b>' + title + '</b><br><span class="muted small">' + desc + '</span></span></label>';
+  let h = '<section class="card"><h3>Options</h3><p class="muted small">Désactivées au départ : active seulement ce qui te sert.</p>';
+  h += tog('knee', 'Suivi d’une douleur au genou', 'Douleur le matin et pendant les séances jambes. Au-dessus de 3/10, pas de sauts et pas de hausse de charge sur les exercices qui sollicitent le genou.');
+  h += tog('jumps', 'Détente et sauts', 'Exercices de pliométrie dans les séances et un test de détente pendant chaque semaine de décharge.');
+  h += tog('sport', 'Sport collectif à côté', 'Tes jours d’entraînement et de match apparaissent dans ta semaine.' + (m.jumps ? ' Tu peux aussi signaler une semaine chargée : pas de sauts en salle.' : ''));
+  if (m.sport) {
+    const days = k => '<div class="days" role="group">' + DAY_ORDER.map(wd => '<button type="button" class="chip txt' + (sp[k].indexOf(wd) >= 0 ? ' on' : '') + '" data-act="sport-day" data-k="' + k + '" data-v="' + wd + '" aria-pressed="' + (sp[k].indexOf(wd) >= 0) + '">' + DAY_SHORT[wd] + '</button>').join('') + '</div>';
+    h += '<div class="stack"><label class="f"><span>Ton sport</span><input id="set-sport" value="' + esc(raw.name || '') + '" placeholder="ex. Basket, foot, hand"></label><span class="label">Jours d’entraînement</span>' + days('train') + '<span class="label">Jours de match</span>' + days('match') + '</div>';
+  }
+  return h + '</section>';
 }
 function viewScience(){
   const sec = (t, p, src) => '<div class="stack"><h3>' + t + '</h3><p>' + p + '</p>' + (src ? '<p class="src">' + src + '</p>' : '') + '</div>';
@@ -1259,17 +1384,46 @@ function viewScience(){
   h += sec('De combien monter', 'L’ACSM recommande +2 à 10 %, moins pour les petits muscles. L’appli prend +2 % (isolation), +2,5 % (haut du corps) ou +5 % (bas du corps), et le haut de la plage (5, 5 ou 10 %) si tu avais 3 reps ou plus en réserve. Le résultat est arrondi au plus petit palier de ton matériel (réglable par exercice), avec au moins un palier. Pour les tractions et les exercices au poids du corps, le pourcentage est calculé sur ton poids de corps plus le lest.', 'ACSM 2009 ; paliers de la NSCA : 1 à 2,5 kg en haut du corps, 2,5 à 5 kg en bas du corps.');
   h += sec('Combien de reps à la nouvelle charge', 'L’appli estime ta force maximale avec la formule d’Epley à partir de ta dernière série (reps faites + reps en réserve), puis calcule combien de reps tu peux faire à la nouvelle charge en gardant ta réserve cible. C’est une estimation, plus fiable entre 3 et 12 reps.', '');
   h += sec('Reps en plus', '+1 rep par série en général. +2 si tu avais 3 reps ou plus en réserve, pour te rapprocher de ta cible. Aucune rep en plus si tu étais à l’échec : tu consolides.', '');
-  h += sec('Reps en réserve visées', '1 en réserve sur l’isolation, 2 sur les gros exercices (1 en fin de bloc, sauf ceux qui sollicitent le genou). La prise de muscle progresse quand on se rapproche de l’échec, alors que la force progresse de façon semblable sur une large plage.', 'Robinson et al., 2024, Sports Medicine (méta-régressions sur la proximité de l’échec).');
+  h += sec('Reps en réserve visées', '1 en réserve sur l’isolation, 2 sur les gros exercices (1 en fin de bloc' + (kneeOn() ? ', sauf ceux qui sollicitent le genou' : '') + '). La prise de muscle progresse quand on se rapproche de l’échec, alors que la force progresse de façon semblable sur une large plage.', 'Robinson et al., 2024, Sports Medicine (méta-régressions sur la proximité de l’échec).');
   h += sec('Charge trop lourde ou stagnation', 'Si la plupart des séries tombent sous la fourchette, l’appli recalcule une charge plus basse d’après ta force estimée. Après 3 séances à la même charge sans progrès, elle propose −10 % puis de remonter. Cette dernière règle vient de la pratique, pas d’une étude.', '');
   h += sec('Volume par muscle', 'Plus de séries par semaine donne plus de muscle, avec des gains qui diminuent progressivement. Une série compte pour 1 sur le muscle principal et 0,5 sur les muscles secondaires.', 'Pelland et al., 2026, Sports Medicine (méta-régression dose-réponse).');
   h += sec('Repos', '2 à 3 min sur les gros exercices lourds, 1 à 2 min sur les autres.', 'ACSM 2009.');
-  h += sec('Décharge', 'Une semaine plus légère toutes les 6 semaines : mêmes charges, environ 1/3 de séries en moins, plus de reps en réserve, moitié des sauts. Les entraîneurs placent souvent la décharge toutes les 4 à 6 semaines pendant environ 7 jours, en baissant surtout le volume. C’est un consensus de praticiens, pas une preuve expérimentale.', 'Bell et al., 2023, Sports Medicine – Open (consensus Delphi).');
-  h += sec('Genou', 'L’exercice progressif pour la hanche et le genou est la base de la prise en charge du syndrome fémoro-patellaire. Le seuil de 3/10 est un repère pratique : au-dessus, l’appli suspend les sauts et bloque les hausses de charge sur les exercices qui sollicitent le genou pendant 10 jours.', 'Willy et al., 2019, JOSPT (recommandations cliniques). Cette appli ne remplace pas un avis médical.');
+  h += sec('Décharge', 'Une semaine plus légère toutes les 6 semaines : mêmes charges, environ 1/3 de séries en moins, plus de reps en réserve' + (jumpsOn() ? ', moitié des sauts' : '') + '. Les entraîneurs placent souvent la décharge toutes les 4 à 6 semaines pendant environ 7 jours, en baissant surtout le volume. C’est un consensus de praticiens, pas une preuve expérimentale.', 'Bell et al., 2023, Sports Medicine – Open (consensus Delphi).');
+  if (kneeOn()) h += sec('Genou', 'L’exercice progressif pour la hanche et le genou est la base de la prise en charge du syndrome fémoro-patellaire. Le seuil de 3/10 est un repère pratique : au-dessus, l’appli suspend les sauts et bloque les hausses de charge sur les exercices qui sollicitent le genou pendant 10 jours.', 'Willy et al., 2019, JOSPT (recommandations cliniques). Cette appli ne remplace pas un avis médical.');
   h += sec('Poids de corps', 'Pour prendre du muscle sans trop de gras, la revue d’Iraki et al. propose une hausse d’environ 0,25 à 0,5 % du poids par semaine chez les pratiquants débutants et intermédiaires. Le bilan de bloc compare ton rythme à cette cible.', 'Iraki et al., 2019, Sports (revue narrative).');
-  h += sec('Test de détente', 'Un test par bloc, pendant la semaine de décharge, au même moment de la séance et avec la même méthode, pour que les mesures soient comparables. Le choix de la décharge (quand la fatigue est la plus basse) est une pratique de terrain.', '');
+  if (jumpsOn()) h += sec('Test de détente', 'Un test par bloc, pendant la semaine de décharge, au même moment de la séance et avec la même méthode, pour que les mesures soient comparables. Le choix de la décharge (quand la fatigue est la plus basse) est une pratique de terrain.', '');
   h += sec('Alerte de fatigue', 'Si ta force estimée baisse de plus de 2,5 % sur au moins 3 exercices (et au moins 40 % de ceux faits cette semaine), l’appli propose d’avancer la décharge. Une baisse de performance sur plusieurs exercices est un signe de fatigue courant ; les seuils sont des repères de terrain.', '');
   h += sec('Sommeil et montée en charge', 'Après une nuit de moins de 6 h, l’appli conseille de garder 1 rep de plus en réserve. La montée en charge avant les gros exercices (50, 70 puis 85 % de la charge de travail) est une pratique courante. Ces deux repères viennent du terrain.', '');
   return h + '</section>';
+}
+
+/* ---------- Premier lancement et changement de programme ---------- */
+function newSetup(mode){ return { mode, name: settings().name || '', prog:null, progName:'', days:[], restart:true }; }
+function viewSetup(){
+  const U = S.setup; const first = U.mode === 'welcome';
+  let h = '';
+  if (first) {
+    h += '<section class="card"><h1>Bienvenue dans Grow&nbsp;up</h1><p>Note tes séances : l’appli calcule tes objectifs de charge et de reps à partir des précédentes.</p><p class="muted small">Tout reste sur ce téléphone, sans compte. Pense à exporter une sauvegarde de temps en temps (Programme › Réglages).</p></section>';
+    h += '<section class="card"><h3>Ton prénom</h3><label class="f"><span>Prénom (facultatif)</span><input id="setup-name" data-u="name" value="' + esc(U.name) + '" autocomplete="given-name"></label></section>';
+  } else {
+    h += '<div class="row between"><h1>Changer de programme</h1><button type="button" class="link" data-act="setup-cancel">Annuler</button></div><p class="muted small">Ton historique et les séances que tu as créées sont gardés. Le planning est remplacé.</p>';
+  }
+  const opt = (k, title, desc) => '<button type="button" class="pick' + (U.prog === k ? ' on' : '') + '" data-act="setup-prog" data-v="' + k + '" aria-pressed="' + (U.prog === k) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(title) + '</span><span class="m">' + esc(desc) + '</span></span><span aria-hidden="true">' + (U.prog === k ? '✓' : '') + '</span></button>';
+  h += '<section class="card"><h3>' + (first ? 'Ton programme de départ' : 'Nouveau programme') + '</h3>';
+  Object.keys(PROGRAMS).forEach(k => { h += opt(k, PROGRAMS[k].name, PROGRAMS[k].desc); });
+  h += opt('custom', 'Créer mon programme', 'Tu le nommes, tu crées tes séances et tu choisis tes exercices.');
+  if (U.prog === 'custom') h += '<label class="f"><span>Nom de ton programme</span><input id="setup-pname" data-u="progName" value="' + esc(U.progName) + '" placeholder="ex. Prise de masse"></label><p class="muted small">Tu choisiras tes jours dans Programme › Planning, une fois tes séances créées.</p>';
+  h += '</section>';
+  if (PROGRAMS[U.prog]) {
+    const n = PROGRAMS[U.prog].tpls.length;
+    h += '<section class="card"><h3>Tes jours de salle</h3><p class="muted small">Ce programme compte ' + n + ' séances : choisis ' + n + ' jours. Elles sont réparties dans l’ordre de la semaine.</p><div class="days" role="group">' +
+      DAY_ORDER.map(wd => { const on = U.days.indexOf(wd) >= 0; return '<button type="button" class="chip txt' + (on ? ' on' : '') + '" data-act="setup-day" data-v="' + wd + '" aria-pressed="' + on + '">' + DAY_SHORT[wd] + '</button>'; }).join('') + '</div></section>';
+  }
+  if (!first) h += '<section class="card"><label class="toggle"><input type="checkbox" id="setup-restart" data-act="setup-restart"' + (U.restart ? ' checked' : '') + '><span><b>Recommencer en semaine 1</b><br><span class="muted small">Nouveau bloc de 6 semaines, en commençant par une semaine de calibration.</span></span></label></section>';
+  else h += '<p class="muted small">Suivi du genou, tests de détente, sport collectif à côté : ces options s’activent plus tard dans Programme › Réglages.</p>';
+  h += '<button type="button" class="btn primary big" data-act="setup-done">' + (first ? 'C’est parti' : 'Changer de programme') + '</button>';
+  if (first) h += '<section class="card"><h3>Tu as déjà une sauvegarde ?</h3><p class="muted small">Importe ton fichier d’export pour retrouver tes séances et tes réglages.</p><label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label></section>';
+  return h;
 }
 
 /* ---------- Éditeurs ---------- */
@@ -1306,8 +1460,8 @@ function viewTplEditor(){
 function viewExEditor(){
   const D = S.draft; const e = D.data; const isSet = e.kind === 'load' || e.kind === 'bw';
   let h = '<section class="card"><div class="row between"><h2>' + (D.isNew ? 'Nouvel exercice' : 'Modifier l’exercice') + '</h2><button type="button" class="link" data-act="draft-cancel">Annuler</button></div>';
-  h += '<label class="f"><span>Nom</span><input id="e-name" data-e="name" value="' + esc(e.name || '') + '" placeholder="ex. Squat bulgare… ou un autre !"></label>';
-  h += '<div class="stack" style="gap:6px"><span class="label">Type</span><div class="chips">' + Object.keys(KINDS).map(k => '<button type="button" class="chip txt' + (e.kind === k ? ' on' : '') + '" data-act="e-kind" data-v="' + k + '" aria-pressed="' + (e.kind === k) + '">' + KINDS[k] + '</button>').join('') + '</div></div>';
+  h += '<label class="f"><span>Nom</span><input id="e-name" data-e="name" value="' + esc(e.name || '') + '" placeholder="ex. Tirage horizontal à la machine"></label>';
+  h += '<div class="stack" style="gap:6px"><span class="label">Type</span><div class="chips">' + Object.keys(KINDS).filter(k => k !== 'plyo' || jumpsOn() || e.kind === 'plyo').map(k => '<button type="button" class="chip txt' + (e.kind === k ? ' on' : '') + '" data-act="e-kind" data-v="' + k + '" aria-pressed="' + (e.kind === k) + '">' + KINDS[k] + '</button>').join('') + '</div></div>';
   if (isSet) {
     h += '<div class="stack" style="gap:6px"><span class="label">Catégorie (règle la hausse de charge)</span><div class="chips">' + Object.keys(CATS).map(k => '<button type="button" class="chip txt' + (e.cat === k ? ' on' : '') + '" data-act="e-cat" data-v="' + k + '" aria-pressed="' + (e.cat === k) + '">' + CATS[k] + '</button>').join('') + '</div></div>';
     h += '<div class="stack" style="gap:6px"><span class="label">Muscles principaux</span><div class="chips">' + MUSCLES.map(x => '<button type="button" class="chip txt' + ((e.muscles.p || []).indexOf(x) >= 0 ? ' on' : '') + '" data-act="e-mp" data-v="' + x + '">' + x + '</button>').join('') + '</div></div>';
@@ -1322,8 +1476,9 @@ function viewExEditor(){
   }
   if (isSet) {
     h += '<label class="toggle"><input type="checkbox" id="e-uni" data-act="e-flag" data-v="uni"' + (e.uni ? ' checked' : '') + '><span><b>Unilatéral</b><br><span class="muted small">Les reps se comptent par jambe ou par bras.</span></span></label>';
-    h += '<label class="toggle"><input type="checkbox" id="e-knee" data-act="e-flag" data-v="knee"' + (e.knee ? ' checked' : '') + '><span><b>Sollicite le genou</b><br><span class="muted small">Charge maintenue si le genou dépasse 3/10.</span></span></label>';
+    if (kneeOn()) h += '<label class="toggle"><input type="checkbox" id="e-knee" data-act="e-flag" data-v="knee"' + (e.knee ? ' checked' : '') + '><span><b>Sollicite le genou</b><br><span class="muted small">Charge maintenue si le genou dépasse 3/10.</span></span></label>';
   }
+  if (!D.isNew) h += '<label class="toggle"><input type="checkbox" id="e-hide" data-act="ex-hide" data-v="' + esc(D.id) + '"' + (excluded().indexOf(D.id) >= 0 ? ' checked' : '') + '><span><b>Masquer cet exercice</b><br><span class="muted small">Il ne sera plus proposé quand tu ajoutes ou remplaces un exercice.</span></span></label>';
   h += '<label class="f"><span>Consignes</span><textarea id="e-cue" data-e="cue" placeholder="Placement, amplitude, réglages de machine…">' + esc(e.cue || '') + '</textarea></label>';
   h += '<button type="button" class="btn primary big" data-act="save-ex">Enregistrer l’exercice</button>';
   if (!D.isNew) {
@@ -1350,7 +1505,36 @@ function supersetNext(w, key){ const items = itemsOf(w); const i = items.findInd
 function toggleIn(arr, v){ arr = (arr || []).slice(); const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); return arr; }
 const bodyTimers = {};
 const A = {
-  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; render(); window.scrollTo(0, 0); },
+  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  // Premier lancement et programme
+  'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
+  'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
+  'setup-restart'(b){ S.setup.restart = b.checked; },
+  'setup-cancel'(){ S.setup = null; render(); },
+  'setup-done'(){
+    const U = S.setup; const first = U.mode === 'welcome'; const custom = U.prog === 'custom';
+    if (!U.prog) { toast('Choisis un programme.'); return; }
+    const name = custom ? String(U.progName || '').trim() : PROGRAMS[U.prog].name;
+    if (!name) { toast('Donne un nom à ton programme.'); const i = $('#setup-pname'); if (i) i.focus(); return; }
+    if (!custom && !U.days.length) { toast('Choisis au moins un jour.'); return; }
+    const program = { base: custom ? null : U.prog, name, days: DAY_ORDER.filter(d => !custom && U.days.indexOf(d) >= 0) };
+    const patch = { program, plan: buildPlan(program.base, program.days) };
+    if (first) { patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; }
+    if (first || U.restart) patch.start = mondayOf(today());
+    putSettings(patch);
+    S.setup = null; S.renaming = false; S.progTab = 'seances';
+    S.view = custom || !first ? 'program' : 'today';
+    render(); window.scrollTo(0, 0);
+    toast(custom ? 'Programme créé : ajoute ta première séance.' : first ? 'C’est parti !' : 'Programme changé.');
+  },
+  'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
+  'prog-rename'(){ S.renaming = true; render(); const i = $('#prog-name'); if (i) i.focus(); },
+  'prog-rename-save'(){ const v = String(($('#prog-name') || {}).value || '').trim(); if (!v) { toast('Donne un nom à ton programme.'); return; } putSettings({ program: Object.assign({}, programOf(), { name:v }) }); S.renaming = false; render(); toast('Programme renommé.'); },
+  'go-new-tpl'(){ S.view = 'program'; S.progTab = 'seances'; A['new-tpl'](); },
+  mod(b){ const m = Object.assign({}, mods()); m[b.dataset.v] = b.checked; putSettings({ modules:m }); render(); toast(b.checked ? 'Option activée.' : 'Option désactivée.'); },
+  'sport-day'(b){ const sp = Object.assign({ name:'', train:[], match:[] }, settings().sport); const k = b.dataset.k; const o = k === 'train' ? 'match' : 'train'; const wd = +b.dataset.v; sp[k] = toggleIn(sp[k], wd); sp[o] = (sp[o] || []).filter(x => x !== wd); putSettings({ sport:sp }); render(); },
+  'ex-hide'(b){ const id = b.dataset.v; const ex = excluded().filter(x => x !== id); if (b.checked) ex.push(id); putSettings({ excluded:ex }); toast(b.checked ? 'Exercice masqué.' : 'Exercice affiché à nouveau.'); },
+  'ex-unhide'(b){ putSettings({ excluded: excluded().filter(x => x !== b.dataset.v) }); render(); toast('Exercice affiché à nouveau.'); },
   bilan(b){ S.bilan = +b.dataset.v; render(); window.scrollTo(0, 0); },
   'bilan-close'(){ S.bilan = null; render(); window.scrollTo(0, 0); },
   'fatigue-deload'(){ const s = settings(); const wk = mondayOf(today()); const dl = Object.assign({}, s.deload); dl[wk] = true; putSettings({ deload: dl }); render(); toast('Décharge avancée à cette semaine.'); },
@@ -1463,7 +1647,7 @@ const A = {
   'reset-ex'(){ del('x_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-ex'(){ S.confirm = 'del-ex'; render(); },
   'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; render(); toast('Exercice supprimé.'); },
-  'reset-plan'(){ const s = Object.assign({}, settings()); delete s.plan; put('settings', Object.assign(s, { start: startDate() })); render(); toast('Planning d’origine rétabli.'); },
+  'reset-plan'(){ const g = programOf(); if (!g || !PROGRAMS[g.base]) return; putSettings({ plan: buildPlan(g.base, g.days || []) }); render(); toast('Planning d’origine rétabli.'); },
   // Données
   async export(b){
     // navigator.share doit partir directement du clic : rien d'asynchrone avant
@@ -1475,7 +1659,7 @@ const A = {
 };
 const EXPORT_TYPES = { json:'application/json', csv:'text/csv' };
 function exportFile(kind){
-  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:2, exportedAt:new Date().toISOString(), docs:Object.fromEntries(S.docs) }, null, 2) : toCsv();
+  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:3, exportedAt:new Date().toISOString(), docs:Object.fromEntries(S.docs) }, null, 2) : toCsv();
   return new File([data], 'grow-up-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
 }
 function downloadFile(file){
@@ -1502,6 +1686,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.matches('[data-f]')) { setField(t); return; }
+  if (t.matches('[data-u]') && S.setup) { S.setup[t.dataset.u] = t.value; return; }
   if (t.matches('[data-pq]') && S.picker) { S.picker.q = t.value; const l = $('#pick-list'); if (l) l.innerHTML = pickerList(); return; }
   if (t.matches('[data-d]') && S.draft) { S.draft.data[t.dataset.d] = t.value; return; }
   if (t.matches('[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; return; }
@@ -1519,6 +1704,8 @@ document.addEventListener('change', e => {
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
   if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
   if (t.id === 'set-height') { putSettings({ height: num(t.value) }); toast('Taille enregistrée.'); return; }
+  if (t.id === 'set-name') { putSettings({ name: t.value.trim() }); toast('Prénom enregistré.'); return; }
+  if (t.id === 'set-sport') { putSettings({ sport: Object.assign({ train:[], match:[] }, settings().sport, { name: t.value.trim() }) }); render(); toast('Sport enregistré.'); return; }
   if (t.id === 'start-date' && t.value) { const st = mondayOf(t.value); putSettings({ start: st }); render(); toast(withDot('Début fixé au lundi ' + fmtDate(st))); return; }
   if (t.id === 'import-file' && t.files && t.files[0]) {
     const r = new FileReader();
@@ -1526,6 +1713,9 @@ document.addEventListener('change', e => {
       try {
         const j = JSON.parse(r.result); const docs = j && j.docs; if (!docs || typeof docs !== 'object') throw new Error('format');
         let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
+        // Exports version 2 ou plus anciens : réglages complétés comme au chargement
+        upgradeLegacy();
+        if (S.setup && S.setup.mode === 'welcome' && !needsSetup()) S.setup = null;
         toast(n + ' éléments importés.'); render();
       } catch (err) { toast('Fichier non reconnu : choisis un export JSON du carnet.'); }
     };
