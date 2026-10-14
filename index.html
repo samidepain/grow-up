@@ -242,6 +242,7 @@ const MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sep
 const WEEKDAYS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
 const fmtDate = s => { const d = parseIso(s); return d.getDate() + ' ' + MONTHS[d.getMonth()]; };
 const fmtDateLong = s => { const d = parseIso(s); return WEEKDAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; };
+const withDot = s => s.slice(-1) === '.' ? s : s + '.'; // fin de phrase sans doubler le point de « oct. »
 const e1rm = (kg, reps) => kg * (1 + reps / 30);
 const clone = o => JSON.parse(JSON.stringify(o));
 const rid = () => Math.random().toString(36).slice(2, 8);
@@ -837,7 +838,7 @@ function viewToday(){
     h += '</section>';
   } else {
     let next = null; for (let i = 1; i <= 7 && !next; i++) { const dd = addDays(d, i); const p = planDay(parseIso(dd).getDay()); if (p.s) next = { d:dd, t:tplDef(p.s) }; }
-    h += '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (plan.note ? '<p class="muted">' + esc(plan.note) + '</p>' : '') + (next ? '<p class="small">Prochaine séance : <b>' + esc(next.t.name) + '</b>, ' + esc(fmtDateLong(next.d)) + '.</p>' : '') + '</section>';
+    h += '<section class="card"><span class="label">Aujourd’hui</span><h2>' + esc(plan.label) + '</h2>' + (plan.note ? '<p class="muted">' + esc(plan.note) + '</p>' : '') + (next ? '<p class="small">Prochaine séance : <b>' + esc(next.t.name) + '</b>, ' + esc(withDot(fmtDateLong(next.d))) + '</p>' : '') + '</section>';
   }
   // Choisir une autre séance
   h += '<section class="card"><h3>Faire une autre séance</h3><p class="muted small">N’importe quel jour, les objectifs sont calculés pareil.</p><div class="row">' + allTpl().map(t => '<button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
@@ -1065,7 +1066,7 @@ function viewProgress(){
   // Détente
   const tests = []; S.docs.forEach((o, id) => { if (id.indexOf('t_') === 0) tests.push(Object.assign({ id }, o)); });
   tests.sort((a, b) => a.date < b.date ? -1 : 1);
-  h += '<section class="card"><h3>Tests de détente</h3><p class="muted small">Un test par bloc, pendant la semaine de décharge : il s’affiche au début de ta séance jambes. ' + esc(JUMP_PROTOCOL) + '</p>' + (testForBlock(wk.block) ? '<p class="small">Test du bloc ' + wk.block + ' fait.</p>' : '<p class="small">Prochain test : semaine du ' + esc(fmtDate(addDays(blockRange(wk.block).from, 35))) + '.</p>') +
+  h += '<section class="card"><h3>Tests de détente</h3><p class="muted small">Un test par bloc, pendant la semaine de décharge : il s’affiche au début de ta séance jambes. ' + esc(JUMP_PROTOCOL) + '</p>' + (testForBlock(wk.block) ? '<p class="small">Test du bloc ' + wk.block + ' fait.</p>' : '<p class="small">Prochain test : semaine du ' + esc(withDot(fmtDate(addDays(blockRange(wk.block).from, 35)))) + '</p>') +
     chart([{ pts: tests.map(t => ({ x: parseIso(t.date).getTime(), y: t.cm })) }], { label:'Détente verticale', empty:'Aucun test pour l’instant.' }) +
     '<div class="row"><input class="plain" type="date" id="test-date" value="' + today() + '" aria-label="Date du test" style="width:auto"><input class="plain" id="test-cm" inputmode="decimal" placeholder="Hauteur en cm" aria-label="Hauteur en cm" style="flex:1;min-width:120px;width:auto"><button type="button" class="btn primary" data-act="add-test">Ajouter</button></div>';
   if (tests.length) h += '<div class="scroll"><table class="tbl"><tbody>' + tests.slice().reverse().map(t => '<tr><td>' + esc(fmtDate(t.date)) + '</td><td class="num">' + fmtKg(t.cm) + ' cm</td><td style="text-align:right"><button type="button" class="link" data-act="del-test" data-v="' + t.id + '">' + (S.confirm === t.id ? 'Confirmer' : 'Supprimer') + '</button></td></tr>').join('') + '</tbody></table></div>';
@@ -1446,7 +1447,7 @@ document.addEventListener('change', e => {
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
   if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
   if (t.id === 'set-height') { putSettings({ height: num(t.value) }); toast('Taille enregistrée.'); return; }
-  if (t.id === 'start-date' && t.value) { const st = mondayOf(t.value); putSettings({ start: st }); render(); toast('Début fixé au lundi ' + fmtDate(st) + '.'); return; }
+  if (t.id === 'start-date' && t.value) { const st = mondayOf(t.value); putSettings({ start: st }); render(); toast(withDot('Début fixé au lundi ' + fmtDate(st))); return; }
   if (t.id === 'import-file' && t.files && t.files[0]) {
     const r = new FileReader();
     r.onload = () => {
