@@ -450,6 +450,12 @@ const lowFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
 function programOf(){ return settings().program || null; }
 function needsSetup(){ return S.loaded && !programOf(); }
 function excluded(){ return settings().excluded || []; }
+// Rappel de sauvegarde : 2 semaines après le dernier export JSON, ou après le début si aucun export. Seulement s'il y a des séances.
+function backupDue(){
+  const ws = workouts(); if (!ws.length) return false;
+  const s = settings(); const ref = s.lastExport || [s.created, ws[0].date].filter(Boolean).sort()[0];
+  return daysBetween(ref, today()) >= 14;
+}
 // Données d'avant les programmes au choix (export version 2 ou plus ancien) : l'appli n'avait alors qu'un programme.
 // On complète les réglages pour que tout reste comme avant, sans rien effacer.
 function upgradeLegacy(){
@@ -968,6 +974,11 @@ function viewToday(){
   const who = String(settings().name || '').trim();
   let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' : '') + esc(fmtDateLong(d)) + '</span>';
   h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span>' : '') + '</div></div>';
+  if (S.loaded && backupDue()) {
+    const le = settings().lastExport;
+    h += '<section class="card" style="border-color:var(--warn)"><h3>Sauvegarde</h3><p class="small">' + (le ? esc(withDot('Ta dernière sauvegarde date du ' + fmtDate(le))) : 'Tu n’as pas encore sauvegardé tes données.') + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>';
+    h += '<button type="button" class="btn primary" data-act="export" data-v="json">Exporter maintenant</button>' + (useShare('json') ? '<p class="muted small">Choisis ensuite «&nbsp;Enregistrer dans Fichiers&nbsp;».</p>' : '') + '</section>';
+  }
   if (S.summary) {
     const sw = S.docs.get(S.summary.id);
     h += '<section class="card" style="border-color:var(--good)"><div class="row between"><h2>Séance enregistrée</h2><button type="button" class="link" data-act="close-summary">Fermer</button></div>';
@@ -1357,6 +1368,7 @@ function viewSettings(){
   h += hid.length ? hid.map(e => '<div class="row between"><span>' + esc(e.name) + '</span><button type="button" class="btn sm" data-act="ex-unhide" data-v="' + esc(e.id) + '">Afficher à nouveau</button></div>').join('') : '<p class="small">Aucun. Pour masquer un exercice, ouvre-le dans Programme › Exercices.</p>';
   h += '</section>';
   h += '<section class="card"><h3>Tes données</h3><p class="small">Les séances sont enregistrées seulement dans ce navigateur. Exporte-les régulièrement.</p>';
+  h += '<p class="small"><b>' + (s.lastExport ? esc(withDot('Dernière sauvegarde : ' + fmtDateLong(s.lastExport))) : 'Aucune sauvegarde pour l’instant.') + '</b> Seul l’export JSON compte comme sauvegarde.</p>';
   h += '<div class="row"><button type="button" class="btn" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
   if (useShare('json')) h += '<p class="muted small">«&nbsp;Exporter&nbsp;» ouvre le menu de partage&nbsp;: choisis «&nbsp;Enregistrer dans Fichiers&nbsp;» pour garder une copie, ou envoie le fichier.</p>';
   h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
@@ -1519,7 +1531,7 @@ const A = {
     if (!custom && !U.days.length) { toast('Choisis au moins un jour.'); return; }
     const program = { base: custom ? null : U.prog, name, days: DAY_ORDER.filter(d => !custom && U.days.indexOf(d) >= 0) };
     const patch = { program, plan: buildPlan(program.base, program.days) };
-    if (first) { patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; }
+    if (first) { patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; patch.created = today(); }
     if (first || U.restart) patch.start = mondayOf(today());
     putSettings(patch);
     S.setup = null; S.renaming = false; S.progTab = 'seances';
@@ -1652,14 +1664,17 @@ const A = {
   async export(b){
     // navigator.share doit partir directement du clic : rien d'asynchrone avant
     const kind = b.dataset.v; const file = exportFile(kind);
-    if (!useShare(kind)) { downloadFile(file); toast('Fichier prêt.'); return; }
-    try { await navigator.share({ files:[file] }); }
-    catch (e) { if (e && e.name === 'AbortError') return; downloadFile(file); toast('Partage impossible : fichier téléchargé à la place.'); }
+    const saved = () => { if (kind === 'json') { putSettings({ lastExport: today() }); render(); } };
+    if (!useShare(kind)) { downloadFile(file); saved(); toast('Fichier prêt.'); return; }
+    try { await navigator.share({ files:[file] }); saved(); }
+    catch (e) { if (e && e.name === 'AbortError') return; downloadFile(file); saved(); toast('Partage impossible : fichier téléchargé à la place.'); }
   }
 };
 const EXPORT_TYPES = { json:'application/json', csv:'text/csv' };
 function exportFile(kind){
-  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:3, exportedAt:new Date().toISOString(), docs:Object.fromEntries(S.docs) }, null, 2) : toCsv();
+  // La sauvegarde porte déjà sa propre date : après une restauration, le rappel repart de là
+  const docs = Object.fromEntries(S.docs); if (docs.settings) docs.settings = Object.assign({}, docs.settings, { lastExport: today() });
+  const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:3, exportedAt:new Date().toISOString(), docs }, null, 2) : toCsv();
   return new File([data], 'grow-up-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
 }
 function downloadFile(file){
