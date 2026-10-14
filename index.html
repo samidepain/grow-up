@@ -379,6 +379,8 @@ function writeIdb(ids){
   return new Promise((ok, ko) => {
     const tx = idb.transaction('docs', 'readwrite'); const st = tx.objectStore('docs');
     ids.forEach(id => { const o = S.docs.get(id); if (o === undefined) st.delete(id); else st.put(o, id); });
+    // Valider tout de suite : l'appli peut être fermée juste après un geste
+    if (tx.commit) tx.commit();
     tx.oncomplete = () => ok();
     tx.onerror = tx.onabort = () => ko(tx.error);
   });

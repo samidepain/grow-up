@@ -1,6 +1,6 @@
 // Grow up : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
-const VERSION = '1';
+const VERSION = '2';
 const CACHE = 'grow-up-' + VERSION;
 const FILES = [
   './',
