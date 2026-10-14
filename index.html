@@ -4,36 +4,48 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Carnet muscu</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<title>Grow up</title>
+<meta name="description" content="Carnet d’entraînement de musculation. Tes données restent sur ton téléphone.">
+<meta name="theme-color" content="#F2F2F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grow up">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
+/* Polices hébergées avec l'appli (licence OFL, voir fonts/) pour marcher hors connexion */
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/barlow-condensed-500.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/barlow-condensed-600.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-700.woff2) format('woff2')}
+@font-face{font-family:'Source Sans 3';font-style:normal;font-weight:400 700;font-display:swap;src:url(fonts/source-sans-3.woff2) format('woff2')}
 /* Layout: carnet d'entraînement une colonne (max 640px), en-tête collant, barre d'onglets en bas, minuteur de repos au-dessus */
 :root{
-  --bg:#F1F3F5; --surface:#FFFFFF; --surface-2:#E7EBEF; --line:#D3D9DF;
-  --ink:#15202A; --muted:#5A6977;
-  --accent:#C9531A; --accent-soft:#FBE6DA; --on-accent:#FFFFFF;
+  --bg:#F2F2F3; --surface:#FFFFFF; --surface-2:#E8E8EA; --line:#D5D5D9;
+  --ink:#19191B; --muted:#5E5E66;
+  --accent:#DA0010; --accent-soft:#FCE4E6; --on-accent:#FFFFFF;
   --court:#1F4C78; --court-soft:#E0E9F3;
-  --good:#1D7F48; --good-soft:#DFF1E6; --warn:#9C6410; --warn-soft:#F8EDD6; --bad:#B9372D; --bad-soft:#F7E0DD;
+  --good:#1D7F48; --good-soft:#DFF1E6; --warn:#9C6410; --warn-soft:#F8EDD6; --bad:#A3141C; --bad-soft:#F8E1E2;
   --f-display:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
   --f-body:'Source Sans 3',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --r:12px; --tabs-h:62px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0D1318; --surface:#151D25; --surface-2:#1D2731; --line:#2A3743;
-  --ink:#E6EBF0; --muted:#94A2AF;
-  --accent:#F07A3B; --accent-soft:#3A2418; --on-accent:#1B0D05;
+  --bg:#111113; --surface:#1A1A1D; --surface-2:#242428; --line:#34343A;
+  --ink:#EDEDEF; --muted:#A0A0A8;
+  --accent:#FF4D57; --accent-soft:#3D1518; --on-accent:#19191B;
   --court:#86B6E6; --court-soft:#18293A;
-  --good:#52C383; --good-soft:#132D1D; --warn:#E3AA45; --warn-soft:#33270F; --bad:#F06B60; --bad-soft:#3A1C19;
+  --good:#52C383; --good-soft:#132D1D; --warn:#E3AA45; --warn-soft:#33270F; --bad:#FF8F8F; --bad-soft:#3A1A1C;
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#0D1318; --surface:#151D25; --surface-2:#1D2731; --line:#2A3743;
-  --ink:#E6EBF0; --muted:#94A2AF;
-  --accent:#F07A3B; --accent-soft:#3A2418; --on-accent:#1B0D05;
+  --bg:#111113; --surface:#1A1A1D; --surface-2:#242428; --line:#34343A;
+  --ink:#EDEDEF; --muted:#A0A0A8;
+  --accent:#FF4D57; --accent-soft:#3D1518; --on-accent:#19191B;
   --court:#86B6E6; --court-soft:#18293A;
-  --good:#52C383; --good-soft:#132D1D; --warn:#E3AA45; --warn-soft:#33270F; --bad:#F06B60; --bad-soft:#3A1C19;
+  --good:#52C383; --good-soft:#132D1D; --warn:#E3AA45; --warn-soft:#33270F; --bad:#FF8F8F; --bad-soft:#3A1A1C;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -203,7 +215,7 @@ textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:1
 <body>
 
 <header class="top"><div class="top-in">
-  <div class="brand">Carnet <b>muscu</b></div>
+  <div class="brand">Grow <b>up</b></div>
   <span id="mode" class="pill">Chargement…</span>
 </div></header>
 
@@ -1462,7 +1474,7 @@ const A = {
 const EXPORT_TYPES = { json:'application/json', csv:'text/csv' };
 function exportFile(kind){
   const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:2, exportedAt:new Date().toISOString(), docs:Object.fromEntries(S.docs) }, null, 2) : toCsv();
-  return new File([data], 'carnet-muscu-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
+  return new File([data], 'grow-up-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
 }
 function downloadFile(file){
   const url = URL.createObjectURL(file);
@@ -1520,6 +1532,7 @@ document.addEventListener('change', e => {
 });
 
 init();
+if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 })();
 </script>
 
