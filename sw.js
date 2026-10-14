@@ -1,10 +1,29 @@
 // Grow up : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
-const VERSION = '5';
+const VERSION = '6';
 const CACHE = 'grow-up-' + VERSION;
 const FILES = [
   './',
   'index.html',
+  'js/app.js',
+  'js/actions.js',
+  'js/backup.js',
+  'js/chart.js',
+  'js/data.js',
+  'js/engine.js',
+  'js/library.js',
+  'js/render.js',
+  'js/store.js',
+  'js/timers.js',
+  'js/util.js',
+  'js/views/editors.js',
+  'js/views/history.js',
+  'js/views/picker.js',
+  'js/views/program.js',
+  'js/views/progress.js',
+  'js/views/session.js',
+  'js/views/setup.js',
+  'js/views/today.js',
   'manifest.webmanifest',
   'icons/apple-touch-icon.png',
   'icons/favicon-32.png',

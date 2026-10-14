@@ -1,0 +1,267 @@
+// Actions de l’interface : clics, saisies et changements.
+import { $, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
+import { DAY_ORDER, PROGRAMS } from './library.js';
+import { del, put, S } from './store.js';
+import { activeWorkout, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
+import { findPRs, initItem } from './engine.js';
+import { downloadFile, exportFile, useShare } from './backup.js';
+import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
+import { render } from './render.js';
+import { pickerList } from './views/picker.js';
+import { newSetup } from './views/setup.js';
+import { blankEx } from './views/editors.js';
+
+function startWorkout(tplId){
+  if (!S.loaded) return;
+  if (activeWorkout()) { S.view = 'session'; render(); return; }
+  const t = tplDef(tplId); if (!t) return;
+  const date = today(); const wk = weekInfo(date);
+  if (!settings().start) putSettings({});
+  const id = 'w_' + date.replace(/-/g, '') + '_' + rid();
+  const items = tplItems(t).map(it => { const e = exDef(it.ex); return e ? snapItem(e, it) : null; }).filter(Boolean);
+  const w = { date, tpl:tplId, name:t.name, cut:t.cut || '', lower:tplLower(t), est:tplEst(t), status:'en_cours', startedAt:Date.now(), week:wk.n, blockWeek:wk.bw, deload:wk.deload, items, ex:{}, targets:{} };
+  items.forEach(it => initItem(w, it, wk));
+  put(id, w);
+  S.view = 'session'; S.summary = null; S.picker = null; S.draft = null;
+  render(); window.scrollTo(0, 0); requestWake();
+}
+function finishWorkout(){
+  const w = activeWorkout(); if (!w) return;
+  w.status = 'terminée'; w.endedAt = Date.now(); w.duration = Math.round((w.endedAt - w.startedAt) / 60000);
+  put(w.id, w);
+  S.summary = { id:w.id, prs: findPRs(w) };
+  stopRest(); S.view = 'today'; render(); window.scrollTo(0, 0);
+}
+function applyPick(exId){
+  const P = S.picker; if (!P) return;
+  const e = exDef(exId); if (!e) return;
+  if (P.mode === 'draft') {
+    if (S.draft && S.draft.kind === 'tpl') S.draft.data.items.push({ ex:e.id, sets:e.sets, lo:e.lo, hi:e.hi, rest:e.rest, ss:null });
+    S.picker = null; render(); return;
+  }
+  const w = activeWorkout(); if (!w) { S.picker = null; render(); return; }
+  if (w.ex[e.id]) { toast('Cet exercice est déjà dans la séance.'); return; }
+  if (!w.items) w.items = itemsOf(w).slice();
+  const wk = weekInfo(w.date);
+  if (P.mode === 'add') {
+    const it = snapItem(e, {}); w.items.push(it); initItem(w, it, wk);
+    toast(e.name + ' ajouté.');
+  } else {
+    const old = w.items[P.idx]; if (!old) return;
+    const it = snapItem(e, { sets: old.sets, ss: old.ss });
+    w.items[P.idx] = it; delete w.ex[old.ex]; delete w.targets[old.ex]; initItem(w, it, wk);
+    if (P.alsoTpl && w.tpl) {
+      const t = tplDef(w.tpl);
+      if (t) { const j = t.items.findIndex(x => canon(x.ex) === canon(old.ex)); if (j >= 0) { t.items[j] = { ex:e.id, sets:t.items[j].sets, lo:e.lo, hi:e.hi, rest:e.rest, ss:t.items[j].ss || null }; saveTpl(t); } }
+    }
+    toast(old.name + ' remplacé par ' + e.name + (P.alsoTpl ? ' (aussi dans la séance modèle).' : '.'));
+  }
+  put(w.id, w); S.picker = null; render();
+}
+function setField(t){
+  const w = activeWorkout(); if (!w) return;
+  const f = t.dataset.f;
+  if (f === 'notes') w.notes = t.value;
+  else { const st = w.ex[t.dataset.ex]; const s = st && st.sets[+t.dataset.i]; if (!s) return; s[f] = t.value; }
+  put(w.id, w);
+}
+function supersetNext(w, key){ const items = itemsOf(w); const i = items.findIndex(x => x.ex === key); const it = items[i]; const nx = items[i + 1]; return it && it.ss && nx && nx.ss === it.ss ? nx : null; }
+const bodyTimers = {};
+const A = {
+  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  // Premier lancement et programme
+  'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
+  'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
+  'setup-restart'(b){ S.setup.restart = b.checked; },
+  'setup-cancel'(){ S.setup = null; render(); },
+  'setup-done'(){
+    const U = S.setup; const first = U.mode === 'welcome'; const custom = U.prog === 'custom';
+    if (!U.prog) { toast('Choisis un programme.'); return; }
+    const name = custom ? String(U.progName || '').trim() : PROGRAMS[U.prog].name;
+    if (!name) { toast('Donne un nom à ton programme.'); const i = $('#setup-pname'); if (i) i.focus(); return; }
+    if (!custom && !U.days.length) { toast('Choisis au moins un jour.'); return; }
+    const program = { base: custom ? null : U.prog, name, days: DAY_ORDER.filter(d => !custom && U.days.indexOf(d) >= 0) };
+    const patch = { program, plan: buildPlan(program.base, program.days) };
+    if (first) { patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; patch.created = today(); }
+    if (first || U.restart) patch.start = mondayOf(today());
+    putSettings(patch);
+    S.setup = null; S.renaming = false; S.progTab = 'seances';
+    S.view = custom || !first ? 'program' : 'today';
+    render(); window.scrollTo(0, 0);
+    toast(custom ? 'Programme créé : ajoute ta première séance.' : first ? 'C’est parti !' : 'Programme changé.');
+  },
+  'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
+  'prog-rename'(){ S.renaming = true; render(); const i = $('#prog-name'); if (i) i.focus(); },
+  'prog-rename-save'(){ const v = String(($('#prog-name') || {}).value || '').trim(); if (!v) { toast('Donne un nom à ton programme.'); return; } putSettings({ program: Object.assign({}, programOf(), { name:v }) }); S.renaming = false; render(); toast('Programme renommé.'); },
+  'go-new-tpl'(){ S.view = 'program'; S.progTab = 'seances'; A['new-tpl'](); },
+  mod(b){ const m = Object.assign({}, mods()); m[b.dataset.v] = b.checked; putSettings({ modules:m }); render(); toast(b.checked ? 'Option activée.' : 'Option désactivée.'); },
+  'sport-day'(b){ const sp = Object.assign({ name:'', train:[], match:[] }, settings().sport); const k = b.dataset.k; const o = k === 'train' ? 'match' : 'train'; const wd = +b.dataset.v; sp[k] = toggleIn(sp[k], wd); sp[o] = (sp[o] || []).filter(x => x !== wd); putSettings({ sport:sp }); render(); },
+  'ex-hide'(b){ const id = b.dataset.v; const ex = excluded().filter(x => x !== id); if (b.checked) ex.push(id); putSettings({ excluded:ex }); toast(b.checked ? 'Exercice masqué.' : 'Exercice affiché à nouveau.'); },
+  'ex-unhide'(b){ putSettings({ excluded: excluded().filter(x => x !== b.dataset.v) }); render(); toast('Exercice affiché à nouveau.'); },
+  bilan(b){ S.bilan = +b.dataset.v; render(); window.scrollTo(0, 0); },
+  'bilan-close'(){ S.bilan = null; render(); window.scrollTo(0, 0); },
+  'fatigue-deload'(){ const s = settings(); const wk = mondayOf(today()); const dl = Object.assign({}, s.deload); dl[wk] = true; putSettings({ deload: dl }); render(); toast('Décharge avancée à cette semaine.'); },
+  'fatigue-ignore'(){ putSettings({ fatigueDismiss: mondayOf(today()) }); render(); },
+  'save-jump'(){
+    const w = activeWorkout(); if (!w) return;
+    const tries = [0,1,2].map(i => num(($('#jump-' + i) || {}).value)).filter(v => v != null && v > 0 && v < 150);
+    if (!tries.length) { toast('Note au moins un essai, en cm.'); return; }
+    const best = Math.max.apply(null, tries);
+    put('t_' + Date.now().toString(36), { date:w.date, cm:best, tries, block: weekInfo(w.date).block });
+    render(); toast('Test enregistré : ' + fmtKg(best) + ' cm.');
+  },
+  ptab(b){ S.progTab = b.dataset.v; S.confirm = null; render(); },
+  start(b){ startWorkout(b.dataset.v); },
+  finish(){ finishWorkout(); },
+  abandon(){ S.confirm = 'abandon'; render(); },
+  'abandon-yes'(){ const w = activeWorkout(); if (w) del(w.id); S.confirm = null; stopRest(); S.view = 'today'; render(); window.scrollTo(0, 0); toast('Séance supprimée.'); },
+  'close-summary'(){ S.summary = null; render(); },
+  done(b){
+    unlockAudio();
+    const w = activeWorkout(); if (!w) return;
+    const key = b.dataset.ex; const it = itemsOf(w).find(x => x.ex === key); if (!it) return;
+    const i = +b.dataset.i; const st = w.ex[key]; const s = st.sets[i];
+    if (!s.done) {
+      if (it.kind !== 'plyo') {
+        const t = w.targets[key] || {};
+        const kgIn = document.getElementById('kg-' + key + '-' + i); const repsIn = document.getElementById('reps-' + key + '-' + i);
+        if (kgIn) s.kg = kgIn.value;
+        if (repsIn) s.reps = repsIn.value;
+        if (num(s.reps) == null) s.reps = String(t.reps && t.reps[i] != null ? t.reps[i] : it.lo);
+        if (it.kind === 'bw' && num(s.kg) == null) s.kg = '0';
+        if (num(s.kg) == null) { toast('Indique la charge utilisée.'); if (kgIn) kgIn.focus(); return; }
+        const nx = st.sets[i + 1]; if (nx && !nx.done && num(nx.kg) == null) nx.kg = s.kg;
+      } else s.reps = it.lo;
+      s.done = true;
+      const nxt = supersetNext(w, key);
+      if (nxt) toast('Enchaîne : ' + nxt.name);
+      else if (it.kind !== 'plyo') startRest(it.rest || 90, it.name + (i + 1 < st.sets.length ? ' · série ' + (i + 2) + ' ensuite' : ' · terminé'));
+      else startRest(60, 'Récupère avant la série suivante');
+    } else s.done = false;
+    put(w.id, w); render();
+  },
+  check(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.done = !st.done; put(w.id, w); render(); },
+  unskip(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; st.skip = false; if (!st.sets.length) { const it = itemsOf(w).find(x => x.ex === b.dataset.ex); for (let i = 0; i < (it ? it.sets : 3); i++) st.sets.push({ kg:null, reps:null, done:false }); } put(w.id, w); render(); },
+  addset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const last = st.sets[st.sets.length - 1]; st.sets.push({ kg: last ? last.kg : null, reps:null, done:false }); put(w.id, w); render(); },
+  rmset(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; if (st.sets.length > 1) st.sets.pop(); put(w.id, w); render(); },
+  rir(b){ const w = activeWorkout(); if (!w) return; const st = w.ex[b.dataset.ex]; const v = +b.dataset.v; st.rir = st.rir === v ? null : v; put(w.id, w); render(); },
+  knee(b){ const w = activeWorkout(); if (!w) return; const v = +b.dataset.v; w.knee = w.knee === v ? null : v; put(w.id, w); render(); },
+  stairs(b){ const d = today(); const id = 'k_' + d; const v = +b.dataset.v; const cur = S.docs.get(id); if (cur && cur.stairs === v) del(id); else put(id, { date:d, stairs:v }); render(); },
+  sleepq(b){ const d = today(); const id = 'b_' + d; const cur = Object.assign({ date:d }, S.docs.get(id) || {}); const v = +b.dataset.v; cur.sleepQ = cur.sleepQ === v ? null : v; put(id, cur); render(); },
+  busy(b){ const s = settings(); const wk = mondayOf(today()); const busy = Object.assign({}, s.busy); if (b.checked) busy[wk] = true; else delete busy[wk]; putSettings({ busy }); render(); },
+  deload(b){ const s = settings(); const wk = mondayOf(today()); const dl = Object.assign({}, s.deload); if (b.checked) dl[wk] = true; else delete dl[wk]; putSettings({ deload: dl }); render(); },
+  'rest-add'(){ if (S.restEnd) S.restEnd += 15000; updateRest(); },
+  'rest-stop'(){ stopRest(); },
+  hist(b){ S.openHist = S.openHist === b.dataset.v ? null : b.dataset.v; S.confirm = null; render(); },
+  'ask-del-w'(b){ S.confirm = b.dataset.v; render(); },
+  'cancel-confirm'(){ S.confirm = null; render(); },
+  'del-w'(b){ del(b.dataset.v); S.confirm = null; S.openHist = null; render(); toast('Séance supprimée.'); },
+  reopen(b){ const w = S.docs.get(b.dataset.v); if (!w || activeWorkout()) return; w.status = 'en_cours'; put(b.dataset.v, w); S.view = 'session'; render(); window.scrollTo(0, 0); toast('Séance rouverte : corrige puis termine-la.'); },
+  'add-test'(){ const cm = num($('#test-cm').value); const date = $('#test-date').value || today(); if (cm == null || cm <= 0 || cm > 150) { toast('Indique une hauteur en cm, par exemple 52.'); return; } put('t_' + Date.now().toString(36), { date, cm }); render(); toast('Test ajouté.'); },
+  'del-test'(b){ if (S.confirm === b.dataset.v) { del(b.dataset.v); S.confirm = null; } else S.confirm = b.dataset.v; render(); },
+  // Choix d'exercice
+  'pick-add'(){ S.picker = { mode:'add', q:'' }; render(); window.scrollTo(0, 0); },
+  'pick-replace'(b){ S.picker = { mode:'replace', idx:+b.dataset.i, q:'', alsoTpl:false }; render(); window.scrollTo(0, 0); },
+  'pick-draft'(){ S.picker = { mode:'draft', q:'' }; render(); window.scrollTo(0, 0); },
+  'pick-cancel'(){ S.picker = null; render(); },
+  'pick-tpl'(b){ if (S.picker) S.picker.alsoTpl = b.checked; },
+  pick(b){ applyPick(b.dataset.v); window.scrollTo(0, 0); },
+  'new-ex-from-pick'(){ const back = { picker:S.picker, prevDraft:S.draft }; S.picker = null; S.draft = { kind:'ex', isNew:true, id:null, data:blankEx(), after:back }; render(); window.scrollTo(0, 0); },
+  // Séances modèles
+  'new-tpl'(){ S.draft = { kind:'tpl', isNew:true, id:'s' + rid(), data:{ name:'', focus:'', cut:'', items:[] } }; render(); window.scrollTo(0, 0); },
+  'edit-tpl'(b){ const t = tplDef(b.dataset.v); if (!t) return; S.draft = { kind:'tpl', isNew:false, id:t.id, data:{ name:t.name, focus:t.focus || '', cut:t.cut || '', items: clone(t.items) } }; render(); window.scrollTo(0, 0); },
+  'it-up'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i > 0) { const x = a[i]; a[i] = a[i - 1]; a[i - 1] = x; } render(); },
+  'it-down'(b){ const a = S.draft.data.items; const i = +b.dataset.i; if (i < a.length - 1) { const x = a[i]; a[i] = a[i + 1]; a[i + 1] = x; } render(); },
+  'it-rm'(b){ S.draft.data.items.splice(+b.dataset.i, 1); render(); },
+  'save-tpl'(){
+    const D = S.draft; const t = D.data;
+    if (!t.name.trim()) { toast('Donne un nom à la séance.'); $('#d-name').focus(); return; }
+    if (!t.items.length) { toast('Ajoute au moins un exercice.'); return; }
+    saveTpl(Object.assign({ id:D.id }, t)); S.draft = null; S.confirm = null; S.view = 'program'; S.progTab = 'seances'; render(); toast('Séance enregistrée.');
+  },
+  'reset-tpl'(){ del('p_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
+  'del-tpl'(){ S.confirm = 'del-tpl'; render(); },
+  'del-tpl-yes'(){ const id = S.draft.id; del('p_' + id); const p = Object.assign({}, planOf()); let ch = false; Object.keys(p).forEach(k => { if (p[k] && p[k].s === id) { p[k] = { label:'Repos' }; ch = true; } }); if (ch) putSettings({ plan:p }); S.draft = null; S.confirm = null; render(); toast('Séance supprimée.'); },
+  'draft-cancel'(){ const after = S.draft && S.draft.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null; if (after) S.picker = after.picker; render(); },
+  // Exercices
+  'new-ex'(){ S.draft = { kind:'ex', isNew:true, id:null, data:blankEx() }; render(); window.scrollTo(0, 0); },
+  'edit-ex'(b){ const e = exDef(b.dataset.v); if (!e) return; const d = clone(e); delete d.id; delete d.custom; S.draft = { kind:'ex', isNew:false, id:e.id, data:d }; render(); window.scrollTo(0, 0); },
+  'e-kind'(b){ S.draft.data.kind = b.dataset.v; if (b.dataset.v === 'plyo' && !S.draft.data.unit) S.draft.data.unit = 'sauts'; render(); },
+  'e-cat'(b){ S.draft.data.cat = b.dataset.v; render(); },
+  'e-mp'(b){ const m = S.draft.data.muscles; m.p = toggleIn(m.p, b.dataset.v); m.s = (m.s || []).filter(x => m.p.indexOf(x) < 0); render(); },
+  'e-ms'(b){ const m = S.draft.data.muscles; m.s = toggleIn(m.s, b.dataset.v); m.p = (m.p || []).filter(x => m.s.indexOf(x) < 0); render(); },
+  'e-flag'(b){ S.draft.data[b.dataset.v] = b.checked; },
+  'save-ex'(){
+    const D = S.draft; const e = D.data;
+    if (!String(e.name || '').trim()) { toast('Donne un nom à l’exercice.'); $('#e-name').focus(); return; }
+    const isSet = e.kind === 'load' || e.kind === 'bw';
+    const lo = num(e.lo), hi = num(e.hi);
+    if (isSet && (!(lo > 0) || !(hi >= lo))) { toast('Vérifie la fourchette de reps : le max doit être au moins égal au min.'); return; }
+    if (isSet && !(e.muscles.p || []).length) { toast('Choisis au moins un muscle principal.'); return; }
+    const out = { name:String(e.name).trim(), kind:e.kind, cat:e.cat || 'iso', sets:num(e.sets) || 3, lo:lo || 1, hi:hi || lo || 1, rest:num(e.rest) || 90, step:num(e.step) || 2.5, unit:e.unit || '', uni:!!e.uni, knee:!!e.knee, muscles:{ p:(e.muscles.p || []).slice(), s:(e.muscles.s || []).slice() }, cue:e.cue || '' };
+    if (e.optional) out.optional = true;
+    const id = D.id || ('c' + rid());
+    put('x_' + id, out);
+    const after = D.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null;
+    toast('Exercice enregistré.');
+    if (after) { S.picker = after.picker; applyPick(id); return; }
+    render();
+  },
+  'reset-ex'(){ del('x_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
+  'del-ex'(){ S.confirm = 'del-ex'; render(); },
+  'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; render(); toast('Exercice supprimé.'); },
+  'reset-plan'(){ const g = programOf(); if (!g || !PROGRAMS[g.base]) return; putSettings({ plan: buildPlan(g.base, g.days || []) }); render(); toast('Planning d’origine rétabli.'); },
+  // Données
+  async export(b){
+    // navigator.share doit partir directement du clic : rien d'asynchrone avant
+    const kind = b.dataset.v; const file = exportFile(kind);
+    const saved = () => { if (kind === 'json') { putSettings({ lastExport: today() }); render(); } };
+    if (!useShare(kind)) { downloadFile(file); saved(); toast('Fichier prêt.'); return; }
+    try { await navigator.share({ files:[file] }); saved(); }
+    catch (e) { if (e && e.name === 'AbortError') return; downloadFile(file); saved(); toast('Partage impossible : fichier téléchargé à la place.'); }
+  }
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  if (b.tagName === 'INPUT') return; // cases à cocher : gérées par change
+  const fn = A[b.dataset.act]; if (fn) { e.preventDefault(); fn(b, e); }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.matches('[data-f]')) { setField(t); return; }
+  if (t.matches('[data-u]') && S.setup) { S.setup[t.dataset.u] = t.value; return; }
+  if (t.matches('[data-pq]') && S.picker) { S.picker.q = t.value; const l = $('#pick-list'); if (l) l.innerHTML = pickerList(); return; }
+  if (t.matches('[data-d]') && S.draft) { S.draft.data[t.dataset.d] = t.value; return; }
+  if (t.matches('[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; return; }
+  if (t.matches('[data-e]') && S.draft) { S.draft.data[t.dataset.e] = t.value; return; }
+  if (t.matches('[data-b]')) {
+    const d = today(); const id = 'b_' + d; const f = t.dataset.b;
+    clearTimeout(bodyTimers[f]);
+    bodyTimers[f] = setTimeout(() => { const cur = Object.assign({ date:d }, S.docs.get(id) || {}); const v = num(t.value); if (v == null) delete cur[f]; else cur[f] = v; put(id, cur); }, 600);
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.matches('input[type=checkbox][data-act]')) { const fn = A[t.dataset.act]; if (fn) fn(t); return; }
+  if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it.ss = t.value || null; return; }
+  if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
+  if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
+  if (t.id === 'set-height') { putSettings({ height: num(t.value) }); toast('Taille enregistrée.'); return; }
+  if (t.id === 'set-name') { putSettings({ name: t.value.trim() }); toast('Prénom enregistré.'); return; }
+  if (t.id === 'set-sport') { putSettings({ sport: Object.assign({ train:[], match:[] }, settings().sport, { name: t.value.trim() }) }); render(); toast('Sport enregistré.'); return; }
+  if (t.id === 'start-date' && t.value) { const st = mondayOf(t.value); putSettings({ start: st }); render(); toast(withDot('Début fixé au lundi ' + fmtDate(st))); return; }
+  if (t.id === 'import-file' && t.files && t.files[0]) {
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const j = JSON.parse(r.result); const docs = j && j.docs; if (!docs || typeof docs !== 'object') throw new Error('format');
+        let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
+        // Exports version 2 ou plus anciens : réglages complétés comme au chargement
+        upgradeLegacy();
+        if (S.setup && S.setup.mode === 'welcome' && !needsSetup()) S.setup = null;
+        toast(n + ' éléments importés.'); render();
+      } catch (err) { toast('Fichier non reconnu : choisis un export JSON du carnet.'); }
+    };
+    r.readAsText(t.files[0]);
+  }
+});
