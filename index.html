@@ -1174,8 +1174,7 @@ function viewSettings(){
   h += '<section class="card"><h3>Taille</h3><label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label></section>';
   h += '<section class="card"><h3>Tes données</h3><p class="small">Les séances sont enregistrées seulement dans ce navigateur. Exporte-les régulièrement.</p>';
   h += '<div class="row"><button type="button" class="btn" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
-  const shareKinds = ['json', 'csv'].filter(canShareKind);
-  if (shareKinds.length) h += '<div class="row">' + shareKinds.map(k => '<button type="button" class="btn" data-act="share" data-v="' + k + '">' + (k === 'json' ? 'Partager (JSON)' : 'Partager les séries (CSV)') + '</button>').join('') + '</div><p class="muted small">Partager permet d’enregistrer le fichier dans Fichiers ou de l’envoyer.</p>';
+  if (useShare('json')) h += '<p class="muted small">«&nbsp;Exporter&nbsp;» ouvre le menu de partage&nbsp;: choisis «&nbsp;Enregistrer dans Fichiers&nbsp;» pour garder une copie, ou envoie le fichier.</p>';
   h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
   h += '</section>';
   return h;
@@ -1394,10 +1393,10 @@ const A = {
   'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; render(); toast('Exercice supprimé.'); },
   'reset-plan'(){ const s = Object.assign({}, settings()); delete s.plan; put('settings', Object.assign(s, { start: startDate() })); render(); toast('Planning d’origine rétabli.'); },
   // Données
-  export(b){ downloadFile(exportFile(b.dataset.v)); toast('Fichier prêt.'); },
-  async share(b){
+  async export(b){
     // navigator.share doit partir directement du clic : rien d'asynchrone avant
-    const file = exportFile(b.dataset.v);
+    const kind = b.dataset.v; const file = exportFile(kind);
+    if (!useShare(kind)) { downloadFile(file); toast('Fichier prêt.'); return; }
     try { await navigator.share({ files:[file] }); }
     catch (e) { if (e && e.name === 'AbortError') return; downloadFile(file); toast('Partage impossible : fichier téléchargé à la place.'); }
   }
@@ -1413,8 +1412,9 @@ function downloadFile(file){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
-function canShareKind(kind){
-  try { return !!(navigator.share && navigator.canShare && navigator.canShare({ files:[new File([''], 'test.' + kind, { type:EXPORT_TYPES[kind] })] })); } catch (e) { return false; }
+// Téléphone ou tablette qui sait partager ce fichier : le menu de partage remplace le téléchargement
+function useShare(kind){
+  try { return matchMedia('(pointer: coarse)').matches && !!(navigator.share && navigator.canShare && navigator.canShare({ files:[new File([''], 'test.' + kind, { type:EXPORT_TYPES[kind] })] })); } catch (e) { return false; }
 }
 function toCsv(){
   const rows = [['date','seance','exercice','serie','kg','reps','reserve']];
