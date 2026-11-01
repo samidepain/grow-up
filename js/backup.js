@@ -8,7 +8,7 @@ export function exportFile(kind){
   // La sauvegarde porte déjà sa propre date : après une restauration, le rappel repart de là
   const docs = Object.fromEntries(S.docs); if (docs.settings) docs.settings = Object.assign({}, docs.settings, { lastExport: today() });
   const data = kind === 'json' ? JSON.stringify({ app:'carnet-muscu', version:3, exportedAt:new Date().toISOString(), docs }, null, 2) : toCsv();
-  return new File([data], 'grow-up-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
+  return new File([data], 'loutrons-' + today() + '.' + kind, { type:EXPORT_TYPES[kind] });
 }
 export function downloadFile(file){
   const url = URL.createObjectURL(file);

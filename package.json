@@ -1,7 +1,7 @@
 {
-  "name": "grow-up",
+  "name": "loutrons",
   "private": true,
-  "description": "Grow up : carnet de musculation (appli web statique, sans dépendance)",
+  "description": "Loutrons : carnet de musculation (appli web statique, sans dépendance)",
   "type": "module",
   "scripts": {
     "test": "node --test \"tests/*.test.js\""

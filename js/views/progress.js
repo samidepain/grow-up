@@ -59,7 +59,7 @@ export function viewProgress(){
 
   // Genou
   const ke = kneeEntries();
-  if (kneeOn()) h += '<section class="card"><h3>Genou</h3><p class="muted small">Escaliers le matin (courbe) et douleur max pendant les séances jambes (points bleus). La ligne pointillée marque 3/10.</p>' +
+  if (kneeOn()) h += '<section class="card"><h3>Genou</h3><p class="muted small">Escaliers le matin (courbe) et douleur max pendant les séances jambes (points). La ligne pointillée marque 3/10.</p>' +
     chart([{ pts: ke.filter(k => k.src === 'stairs').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })) }, { pts: ke.filter(k => k.src === 'session').map(k => ({ x: parseIso(k.date).getTime(), y: k.v })), color:'var(--court)', line:false }], { yMin:0, yMax:10, thresh:3, threshLabel:'3/10', area:false, label:'Douleur au genou', empty:'Note la douleur aux escaliers dans Aujourd’hui.' }) + '</section>';
 
   // Détente

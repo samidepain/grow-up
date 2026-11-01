@@ -1,8 +1,8 @@
-// Grow up : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
+// Loutrons : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
 // Même numéro que dans js/version.js (affiché dans Réglages).
-const VERSION = '1.0';
-const CACHE = 'grow-up-' + VERSION;
+const VERSION = '1.1';
+const CACHE = 'loutrons-' + VERSION;
 const FILES = [
   './',
   'index.html',
@@ -27,6 +27,7 @@ const FILES = [
   'js/views/setup.js',
   'js/views/today.js',
   'manifest.webmanifest',
+  'icons/logo.png',
   'icons/apple-touch-icon.png',
   'icons/favicon-32.png',
   'icons/icon-192.png',
@@ -47,7 +48,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k.indexOf('grow-up-') === 0 && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => (k.indexOf('loutrons-') === 0 || k.indexOf('grow-up-') === 0) && k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 

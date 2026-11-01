@@ -78,7 +78,7 @@ function viewSettings(){
   if (useShare('json')) h += '<p class="muted small">«&nbsp;Exporter&nbsp;» ouvre le menu de partage&nbsp;: choisis «&nbsp;Enregistrer dans Fichiers&nbsp;» pour garder une copie, ou envoie le fichier.</p>';
   h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
   h += '</section>';
-  h += '<p class="muted small" style="text-align:center">Grow up · version ' + esc(VERSION) + '</p>';
+  h += '<p class="muted small" style="text-align:center">Loutrons · version ' + esc(VERSION) + '</p>';
   return h;
 }
 function optionsCard(){

@@ -9,7 +9,7 @@ export function viewSetup(){
   const U = S.setup; const first = U.mode === 'welcome';
   let h = '';
   if (first) {
-    h += '<section class="card"><h1>Bienvenue dans Grow&nbsp;up</h1><p>Note tes séances : l’appli calcule tes objectifs de charge et de reps à partir des précédentes.</p><p class="muted small">Tout reste sur ce téléphone, sans compte. Pense à exporter une sauvegarde de temps en temps (Programme › Réglages).</p></section>';
+    h += '<section class="card welcome"><img class="hero-logo" src="icons/logo.png" alt="La loutre des Loutrons qui soulève une barre" width="128" height="128"><h1>Bienvenue chez les Loutrons</h1><p>Note tes séances : l’appli calcule tes objectifs de charge et de reps à partir des précédentes.</p><p class="muted small">Tout reste sur ce téléphone, sans compte. Pense à exporter une sauvegarde de temps en temps (Programme › Réglages).</p></section>';
     h += '<section class="card"><h3>Ton prénom</h3><label class="f"><span>Prénom (facultatif)</span><input id="setup-name" data-u="name" value="' + esc(U.name) + '" autocomplete="given-name"></label></section>';
   } else {
     h += '<div class="row between"><h1>Changer de programme</h1><button type="button" class="link" data-act="setup-cancel">Annuler</button></div><p class="muted small">Ton historique et les séances que tu as créées sont gardés. Le planning est remplacé.</p>';
