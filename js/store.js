@@ -2,7 +2,7 @@
 import { lsGet, lsSet, toast } from './util.js';
 
 export const S = { docs:new Map(), loaded:false, view:'today',
-  progEx:'la_hack', progTab:'seances', progressTab:'stats', openHist:null, confirm:null, summary:null,
+  progEx:'la_hack', progTab:'seances', progressTab:'stats', calMonth:null, calDay:null, openHist:null, confirm:null, summary:null,
   restEnd:0, restLabel:'', restDoneAt:0, picker:null, draft:null, setup:null, renaming:false };
 const LS_DOCS = 'carnet_docs_v1'; // ancien stockage : recopié dans IndexedDB au premier lancement, puis laissé en place
 const IDB_NAME = 'carnet-muscu';

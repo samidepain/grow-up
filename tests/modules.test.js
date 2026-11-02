@@ -30,6 +30,8 @@ const modules = fichiers.map(f => {
   for (const m of code.matchAll(/^export const .*$/gm)) for (const n of m[0].matchAll(/, ([\w$]+) = \(\) =>/g)) exports.add(n[1]);
   const imports = [...code.matchAll(/^import \{ ([^}]+) \} from '([^']+)';/gm)].map(m => ({ noms: m[1].split(',').map(s => s.trim()), de: normalize(join(dirname(f), m[2])) }));
   const locaux = new Set([...code.matchAll(/(?:function|const|let|var)\s+([\w$]+)/g)].map(m => m[1]));
+  // Paramètres : function f(a, b), (a, b) => et a =>
+  for (const m of code.matchAll(/function\s*[\w$]*\s*\(([^)]*)\)|\(([^()]*)\)\s*=>|([\w$]+)\s*=>/g)) (m[1] || m[2] || m[3] || '').split(',').forEach(x => { const n = x.trim().split('=')[0].trim(); if (/^[\w$]+$/.test(n)) locaux.add(n); });
   return { f, nom: relative(racine, f), code: sansTexte(code), exports, imports, locaux };
 });
 const parNom = new Map(modules.map(m => [m.f, m]));

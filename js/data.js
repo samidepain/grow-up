@@ -1,5 +1,5 @@
 // Accès aux données : réglages, exercices, séances modèles, planning, historique.
-import { addDays, capFirst, clone, daysBetween, e1rm, lowFirst, mondayOf, num, today } from './util.js';
+import { addDays, capFirst, clone, daysBetween, e1rm, lowFirst, mondayOf, num, parseIso, today } from './util.js';
 import { ALIAS, BASE_EX, BASE_TPL, DAY_NOTES, DAY_ORDER, M, PROGRAMS } from './library.js';
 import { put, S } from './store.js';
 
@@ -167,6 +167,13 @@ export function activeWorkout(){
   let w = null;
   S.docs.forEach((o, id) => { if (id.indexOf('w_') === 0 && o.status === 'en_cours' && (!w || (o.startedAt || 0) > (w.startedAt || 0))) w = Object.assign(o, { id }); });
   return w;
+}
+// Une journée pour le calendrier : séances faites, séance en cours, et séance prévue (aujourd'hui et après seulement)
+export function daySummary(day){
+  const ws = workouts().filter(w => w.date === day);
+  const done = ws.filter(w => w.status === 'terminée'); const active = ws.find(w => w.status === 'en_cours') || null;
+  const future = day >= today(); const p = planDay(parseIso(day).getDay());
+  return { date: day, done, active, planned: future && !done.length && !active && p.s ? p.s : null, label: future ? p.label : 'Repos' };
 }
 export function countSets(w){ let n = 0; Object.keys(w.ex || {}).forEach(id => { n += validSets(w.ex[id].sets).length; }); return n; }
 export function musclesOf(key, w){

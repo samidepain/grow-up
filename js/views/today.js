@@ -1,5 +1,5 @@
 // Écran Aujourd’hui.
-import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, num, parseIso, today, withDot } from '../util.js';
+import { addDays, capFirst, esc, fmtDate, fmtDateLong, fmtKg, lowFirst, mondayOf, nSeries, num, parseIso, today, withDot } from '../util.js';
 import { DAY_ORDER, DAY_SHORT } from '../library.js';
 import { S } from '../store.js';
 import { activeWorkout, allTpl, backupDue, bodyweight, countSets, jumpsOn, kneeAlert, kneeOn, planDay, settings, sportInfo, sportOn, testForBlock, tplDef, tplEst, weekGoal, weekInfo, wName, workouts } from '../data.js';
@@ -7,6 +7,7 @@ import { fatigueCheck } from '../engine.js';
 import { useShare } from '../backup.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
+import { calendarCard } from './calendar.js';
 
 export function viewToday(){
   const d = today(); const wd = parseIso(d).getDay(); const plan = planDay(wd);
@@ -16,6 +17,7 @@ export function viewToday(){
   const who = String(settings().name || '').trim();
   let h = '<div class="stack"><span class="hero-date">' + (who ? 'Salut ' + esc(who) + ' · ' : '') + esc(fmtDateLong(d)) + '</span>';
   h += '<div class="row"><span class="pill acc">Semaine ' + wk.n + '</span><span class="pill court">Bloc ' + wk.block + ' · semaine ' + wk.bw + '/6</span>' + (wk.busy ? '<span class="pill warn">' + esc(capFirst(sportInfo().name)) + ' chargé</span>' : '') + '</div></div>';
+  h += calendarCard();
   if (S.loaded && backupDue()) {
     const le = settings().lastExport;
     h += '<section class="card" style="border-color:var(--warn)"><h3>Sauvegarde</h3><p class="small">' + (le ? esc(withDot('Ta dernière sauvegarde date du ' + fmtDate(le))) : 'Tu n’as pas encore sauvegardé tes données.') + ' Elles ne sont que sur ce téléphone : exporte une copie pour ne rien perdre si tu changes de téléphone ou supprimes l’appli.</p>';
@@ -24,7 +26,7 @@ export function viewToday(){
   if (S.summary) {
     const sw = S.docs.get(S.summary.id);
     h += '<section class="card" style="border-color:var(--good)"><div class="row between"><h2>Séance enregistrée</h2><button type="button" class="link" data-act="close-summary">Fermer</button></div>';
-    if (sw) h += '<p class="muted">' + esc(wName(sw)) + ' · ' + (sw.duration || 0) + ' min · ' + countSets(sw) + ' séries</p>';
+    if (sw) h += '<p class="muted">' + esc(wName(sw)) + ' · ' + (sw.duration || 0) + ' min · ' + nSeries(countSets(sw)) + '</p>';
     h += S.summary.prs.length ? '<div class="stack"><span class="label">Nouveaux records</span>' + S.summary.prs.map(p => '<p>' + esc(p) + '</p>').join('') + '</div>' : '<p class="muted small">Pas de record cette fois. La régularité compte plus que chaque séance.</p>';
     h += '</section>';
   }
@@ -55,17 +57,6 @@ export function viewToday(){
   const tpls = allTpl();
   if (S.loaded && !tpls.length) h += noTplCard();
   else h += '<section class="card"><h3>Faire une autre séance</h3><p class="muted small">N’importe quel jour, les objectifs sont calculés pareil.</p><div class="row">' + tpls.map(t => '<button type="button" class="btn" data-act="start" data-v="' + esc(t.id) + '"' + (S.loaded ? '' : ' disabled') + '>' + esc(t.name) + '</button>').join('') + '</div></section>';
-
-  // Semaine
-  const mon = mondayOf(d);
-  h += '<section class="card"><div class="row between"><h3>Ta semaine</h3><span class="muted small">' + ws.filter(w => w.date >= mon && w.date <= addDays(mon, 6) && w.status === 'terminée').length + ' séance(s) faite(s)</span></div><div class="week">';
-  DAY_ORDER.forEach((wdx, i) => {
-    const day = addDays(mon, i); const p = planDay(wdx);
-    const done = ws.filter(w => w.date === day && w.status === 'terminée');
-    const lbl = p.s ? tplDef(p.s).name : p.label;
-    h += '<div class="day' + (day === d ? ' today' : '') + (done.length ? ' done' : '') + '"><span class="d">' + DAY_SHORT[wdx] + '</span><span class="s">' + esc(lbl) + '</span><span class="k">' + (done.length ? 'Fait' : (p.s ? 'Salle' : (p.label === 'Repos' ? '—' : esc(capFirst(sportInfo().name))))) + '</span></div>';
-  });
-  h += '</div></section>';
 
   // Corps et sommeil
   const b = S.docs.get('b_' + d) || {};

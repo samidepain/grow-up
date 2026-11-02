@@ -1,5 +1,5 @@
 // Actions de l’interface : clics, saisies et changements.
-import { $, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
+import { $, addMonths, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
 import { activeWorkout, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
@@ -78,7 +78,7 @@ function profileError(f, v){
 // Pesée du jour, comme dans « Corps et sommeil »
 function saveWeight(kg){ const d = today(); put('b_' + d, Object.assign({ date:d }, S.docs.get('b_' + d) || {}, { weight:kg })); }
 const A = {
-  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   // Premier lancement et programme
   'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
@@ -117,6 +117,13 @@ const A = {
   profile(){ S.view = 'profile'; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
   prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
+  // Calendrier : toucher un jour ouvre son mois et affiche ce jour ; flèches ou glissement pour changer de mois
+  'cal-month'(){ S.calMonth = today().slice(0, 7); S.calDay = null; render(); },
+  'cal-week'(){ S.calMonth = null; S.calDay = null; render(); },
+  'cal-prev'(){ S.calMonth = addMonths(S.calMonth, -1); S.calDay = null; render(); },
+  'cal-next'(){ S.calMonth = addMonths(S.calMonth, 1); S.calDay = null; render(); },
+  'cal-day'(b){ const d = b.dataset.v; S.calMonth = d.slice(0, 7); S.calDay = S.calDay === d ? null : d; render(); },
+  'cal-hist'(b){ S.view = 'progress'; S.progressTab = 'history'; S.openHist = b.dataset.v; S.calMonth = null; S.calDay = null; render(); const el = document.querySelector('[data-act="hist"][data-v="' + b.dataset.v + '"]'); if (el) el.scrollIntoView({ block:'start' }); },
   'set-sex'(b){ putSettings({ sex: settings().sex === b.dataset.v ? null : b.dataset.v }); render(); },
   theme(b){ putSettings({ theme: b.dataset.v }); applyTheme(b.dataset.v); render(); },
   'prog-rename'(){ S.renaming = true; render(); const i = $('#prog-name'); if (i) i.focus(); },
@@ -268,6 +275,14 @@ document.addEventListener('input', e => {
     bodyTimers[f] = setTimeout(() => { const cur = Object.assign({ date:d }, S.docs.get(id) || {}); const v = num(t.value); if (v == null) delete cur[f]; else cur[f] = v; put(id, cur); }, 600);
   }
 });
+// Calendrier : glisser vers la gauche (mois suivant) ou vers la droite (mois précédent)
+let swipe = null;
+document.addEventListener('touchstart', e => { swipe = e.target.closest('.cal-month') ? { x:e.touches[0].clientX, y:e.touches[0].clientY } : null; }, { passive:true });
+document.addEventListener('touchend', e => {
+  if (!swipe || !S.calMonth) return;
+  const t = e.changedTouches[0]; const dx = t.clientX - swipe.x, dy = t.clientY - swipe.y; swipe = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy)) { S.calMonth = addMonths(S.calMonth, dx < 0 ? 1 : -1); S.calDay = null; render(); }
+}, { passive:true });
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.matches('input[type=checkbox][data-act]')) { const fn = A[t.dataset.act]; if (fn) fn(t); return; }

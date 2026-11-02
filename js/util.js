@@ -24,6 +24,17 @@ export const rid = () => Math.random().toString(36).slice(2, 8);
 export function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
 export function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
 export const capFirst = s => s.charAt(0).toUpperCase() + s.slice(1);
+export const nSeries = n => n + ' série' + (n > 1 ? 's' : '');
+// Mois au format AAAA-MM : nom, mois voisins, et cases du lundi au dimanche (null hors du mois)
+const MONTHS_LONG = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+export const fmtMonth = ym => { const p = ym.split('-').map(Number); return MONTHS_LONG[p[1] - 1] + ' ' + p[0]; };
+export const addMonths = (ym, n) => { const p = ym.split('-').map(Number); const d = new Date(p[0], p[1] - 1 + n, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+export function monthDays(ym){
+  const p = ym.split('-').map(Number); const lead = (new Date(p[0], p[1] - 1, 1).getDay() + 6) % 7; const n = new Date(p[0], p[1], 0).getDate();
+  const out = Array(lead).fill(null); for (let i = 1; i <= n; i++) out.push(ym + '-' + pad(i));
+  while (out.length % 7) out.push(null);
+  return out;
+}
 export const lowFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
 let toastT = null;
 export function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3500); }
