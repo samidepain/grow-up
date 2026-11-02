@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>try{var t=localStorage.getItem('loutrons-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Loutrons</title>
 <meta name="description" content="Carnet d’entraînement de musculation. Tes données restent sur ton téléphone.">
@@ -65,6 +66,9 @@ button{cursor:pointer}
 .top-in{max-width:640px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.08em}
 .brand img{width:32px;height:32px;display:block}
+.me{width:36px;height:36px;flex:none;border-radius:50%;border:none;padding:0;background:var(--accent);color:var(--on-accent);font-family:var(--f-display);font-weight:700;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center}
+.me svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.me.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
 .pill.good{background:var(--good-soft);color:var(--good)}
 .pill.warn{background:var(--warn-soft);color:var(--warn)}
@@ -198,7 +202,7 @@ textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:1
 
 /* Barres fixes */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs-in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+.tabs-in{max-width:640px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
 .tab{background:none;border:none;min-height:var(--tabs-h);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600;color:var(--muted);position:relative}
 .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tab.on{color:var(--accent-ink)}
@@ -221,7 +225,7 @@ textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:1
 
 <header class="top"><div class="top-in">
   <div class="brand"><img src="icons/logo.png" alt="" width="32" height="32">LOUTRONS</div>
-  <span id="mode" class="pill">Chargement…</span>
+  <button type="button" id="me" class="me" data-act="profile" aria-label="Ton profil et les réglages" hidden></button>
 </div></header>
 
 <main id="app"><p class="empty">Chargement du carnet…</p></main>

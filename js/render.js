@@ -1,41 +1,51 @@
-// Affichage : barre d’onglets et choix de l’écran à afficher.
-import { $, parseIso, today } from './util.js';
+// Affichage : barre d’onglets, rond du profil, thème, et choix de l’écran à afficher.
+import { $, esc, parseIso, today } from './util.js';
 import { S } from './store.js';
-import { activeWorkout, needsSetup, planDay, workouts } from './data.js';
+import { activeWorkout, needsSetup, planDay, settings, workouts } from './data.js';
 import { ensureTick } from './timers.js';
 import { viewToday } from './views/today.js';
 import { viewSession } from './views/session.js';
 import { viewPicker } from './views/picker.js';
-import { viewBilan, viewProgress } from './views/progress.js';
-import { viewHistory } from './views/history.js';
+import { viewBilan, viewProgressPage } from './views/progress.js';
 import { viewProgram } from './views/program.js';
+import { viewProfile, viewSciencePage } from './views/profile.js';
 import { newSetup, viewSetup } from './views/setup.js';
 import { viewDraft } from './views/editors.js';
 
 const ICONS = {
   today:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
-  session:'<svg viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',
+  training:'<svg viewBox="0 0 24 24"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/></svg>',
   progress:'<svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>',
-  history:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-  program:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>'
+  person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'
 };
-const TABS = [['today','Aujourd’hui'],['session','Séance'],['progress','Progrès'],['history','Historique'],['program','Programme']];
+const TABS = [['today','Aujourd’hui'],['training','Entraînement'],['progress','Progrès']];
 function sessionDueToday(){ if (!S.loaded) return false; const d = today(); const p = planDay(parseIso(d).getDay()); return !!p.s && !workouts().some(w => w.date === d && w.status === 'terminée'); }
 export function renderTabs(){
   const aw = S.loaded && activeWorkout(); const due = sessionDueToday();
-  $('#tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'session' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
-  const m = $('#mode');
-  if (!S.loaded) { m.className = 'pill'; m.textContent = 'Chargement…'; }
-  else { m.className = 'pill warn'; m.textContent = 'Sur cet appareil'; }
+  $('#tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.view === t[0] ? ' on' : '') + '" data-act="tab" data-v="' + t[0] + '" aria-current="' + (S.view === t[0] ? 'page' : 'false') + '">' + ICONS[t[0]] + '<span>' + t[1] + '</span>' + ((t[0] === 'training' && aw) || (t[0] === 'today' && due && !aw) ? '<i class="dot" aria-hidden="true"></i>' : '') + '</button>').join('');
+  // Rond du profil : l'initiale du prénom ou pseudo, sinon un pictogramme
+  const me = $('#me'); const name = String(settings().name || '').trim();
+  me.hidden = !S.loaded || !!(S.setup && S.setup.mode === 'welcome');
+  me.innerHTML = name ? esc(name.charAt(0).toUpperCase()) : ICONS.person;
+  me.classList.toggle('on', S.view === 'profile' || S.view === 'science');
 }
 export function render(){
   if (needsSetup() && !S.setup) S.setup = newSetup('welcome');
   renderTabs();
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
-  const v = S.view;
+  const v = S.view; const aw = activeWorkout();
   $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.bilan ? viewBilan(S.bilan)
-    : v === 'session' ? viewSession() : v === 'progress' ? viewProgress() : v === 'history' ? viewHistory() : v === 'program' ? viewProgram() : viewToday();
-  if (v === 'session' && activeWorkout()) ensureTick();
+    : v === 'training' ? (aw ? viewSession() : viewProgram()) : v === 'progress' ? viewProgressPage()
+    : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : viewToday();
+  if (v === 'training' && aw) ensureTick();
+}
+// Apparence : automatique (réglage du téléphone), clair ou sombre. Gardée aussi dans localStorage pour s'appliquer dès l'ouverture.
+const THEME_COLORS = { light:'#FAF5EC', dark:'#120F10' };
+export function applyTheme(t){
+  const forced = t === 'light' || t === 'dark'; const root = document.documentElement;
+  if (forced) root.dataset.theme = t; else delete root.dataset.theme;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.content = forced ? THEME_COLORS[t] : (m.media.indexOf('dark') >= 0 ? THEME_COLORS.dark : THEME_COLORS.light); });
+  try { if (forced) localStorage.setItem('loutrons-theme', t); else localStorage.removeItem('loutrons-theme'); } catch (e) {}
 }
 export function kneeChips(sel, act, dis){
   let h = '<div class="chips" role="group">';

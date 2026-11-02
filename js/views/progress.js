@@ -5,13 +5,19 @@ import { S } from '../store.js';
 import { allEx, allTpl, blockRange, bodyDocs, bodyweight, canon, exDef, history, jumpsOn, kneeEntries, kneeOn, planDay, settings, testForBlock, weekInfo, workouts } from '../data.js';
 import { blockReport, fatigueCheck, muscleDone, musclePlanned } from '../engine.js';
 import { chart } from '../chart.js';
+import { viewHistory } from './history.js';
 
-export function viewProgress(){
+const PRTABS = [['stats','Résumé'],['history','Historique']];
+export function viewProgressPage(){
+  const h = '<h1>Progrès</h1><div class="seg" role="tablist">' + PRTABS.map(t => '<button type="button" class="chip' + (S.progressTab === t[0] ? ' on' : '') + '" data-act="prtab" data-v="' + t[0] + '" role="tab" aria-selected="' + (S.progressTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>';
+  return h + (S.progressTab === 'history' ? viewHistory() : viewProgress());
+}
+function viewProgress(){
   if (!S.loaded) return '<p class="empty">Chargement…</p>';
   const ws = workouts().filter(w => w.status === 'terminée'); const d = today();
   const last28 = ws.filter(w => w.date > addDays(d, -28)); const wk = weekInfo(d);
   const perWeek = DAY_ORDER.filter(x => planDay(x).s).length;
-  let h = '<h1>Progrès</h1>';
+  let h = '';
   h += '<div class="stats"><div class="stat"><span class="v num">' + ws.length + '</span><span class="l">séances au total</span></div><div class="stat"><span class="v num">' + last28.length + '<span class="small muted">/' + perWeek * 4 + '</span></span><span class="l">sur 4 semaines</span></div><div class="stat"><span class="v num">' + wk.n + '</span><span class="l">semaine du programme</span></div></div>';
 
   const fat = fatigueCheck();
@@ -54,7 +60,7 @@ export function viewProgress(){
   const wPts = bd.filter(x => num(x.weight) > 0).map(x => ({ x: parseIso(x.date).getTime(), y: num(x.weight) }));
   const sPts = bd.filter(x => num(x.sleep) > 0).map(x => ({ x: parseIso(x.date).getTime(), y: num(x.sleep) }));
   const bwNow = bodyweight();
-  h += '<section class="card"><h3>Poids de corps</h3>' + (bwNow && height ? '<p class="muted small">Dernier : ' + fmtKg(bwNow) + ' kg · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(Math.round(bwNow / Math.pow(height / 100, 2) * 10) / 10) + '. En prise de muscle, une hausse lente et régulière est le signe attendu.</p>' : '<p class="muted small">Note ton poids dans Aujourd’hui et ta taille dans Programme › Réglages.</p>') + chart([{ pts:wPts }], { label:'Poids', empty:'Pas encore de pesée.' }) + '</section>';
+  h += '<section class="card"><h3>Poids de corps</h3>' + (bwNow && height ? '<p class="muted small">Dernier : ' + fmtKg(bwNow) + ' kg · taille ' + fmtKg(height) + ' cm · IMC ' + fmtKg(Math.round(bwNow / Math.pow(height / 100, 2) * 10) / 10) + '. En prise de muscle, une hausse lente et régulière est le signe attendu.</p>' : '<p class="muted small">Note ton poids dans Aujourd’hui et ta taille dans ton profil.</p>') + chart([{ pts:wPts }], { label:'Poids', empty:'Pas encore de pesée.' }) + '</section>';
   h += '<section class="card"><h3>Sommeil</h3>' + chart([{ pts:sPts, color:'var(--court)' }], { label:'Sommeil', yMin:0, thresh:7, threshLabel:'7 h', empty:'Note tes heures de sommeil dans Aujourd’hui.' }) + '</section>';
 
   // Genou

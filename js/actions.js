@@ -6,14 +6,14 @@ import { activeWorkout, buildPlan, canon, excluded, exDef, itemsOf, mods, needsS
 import { findPRs, initItem } from './engine.js';
 import { downloadFile, exportFile, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
-import { render } from './render.js';
+import { applyTheme, render } from './render.js';
 import { pickerList } from './views/picker.js';
 import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
 
 function startWorkout(tplId){
   if (!S.loaded) return;
-  if (activeWorkout()) { S.view = 'session'; render(); return; }
+  if (activeWorkout()) { S.view = 'training'; render(); return; }
   const t = tplDef(tplId); if (!t) return;
   const date = today(); const wk = weekInfo(date);
   if (!settings().start) putSettings({});
@@ -22,7 +22,7 @@ function startWorkout(tplId){
   const w = { date, tpl:tplId, name:t.name, cut:t.cut || '', lower:tplLower(t), est:tplEst(t), status:'en_cours', startedAt:Date.now(), week:wk.n, blockWeek:wk.bw, deload:wk.deload, items, ex:{}, targets:{} };
   items.forEach(it => initItem(w, it, wk));
   put(id, w);
-  S.view = 'session'; S.summary = null; S.picker = null; S.draft = null;
+  S.view = 'training'; S.summary = null; S.picker = null; S.draft = null;
   render(); window.scrollTo(0, 0); requestWake();
 }
 function finishWorkout(){
@@ -67,6 +67,16 @@ function setField(t){
 }
 function supersetNext(w, key){ const items = itemsOf(w); const i = items.findIndex(x => x.ex === key); const it = items[i]; const nx = items[i + 1]; return it && it.ss && nx && nx.ss === it.ss ? nx : null; }
 const bodyTimers = {};
+// Champs facultatifs du profil : vides, ou plausibles
+function profileError(f, v){
+  if (v == null || String(v).trim() === '') return '';
+  if (f === 'height') { const n = num(v); return n != null && n >= 100 && n <= 250 ? '' : 'Indique ta taille en cm, par exemple 178.'; }
+  if (f === 'weight') { const n = num(v); return n != null && n >= 25 && n <= 350 ? '' : 'Indique ton poids en kg, par exemple 72,5.'; }
+  if (f === 'birth') return /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= '1900-01-01' && v <= today() ? '' : 'Vérifie ta date de naissance.';
+  return '';
+}
+// Pesée du jour, comme dans « Corps et sommeil »
+function saveWeight(kg){ const d = today(); put('b_' + d, Object.assign({ date:d }, S.docs.get('b_' + d) || {}, { weight:kg })); }
 const A = {
   tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   // Premier lancement et programme
@@ -76,24 +86,42 @@ const A = {
   'setup-cancel'(){ S.setup = null; render(); },
   'setup-done'(){
     const U = S.setup; const first = U.mode === 'welcome'; const custom = U.prog === 'custom';
+    if (first) {
+      if (!String(U.name || '').trim()) { toast('Indique ton prénom ou un pseudo.'); const i = $('#setup-name'); if (i) i.focus(); return; }
+      const bad = ['birth', 'height', 'weight'].map(f => profileError(f, U[f])).find(Boolean);
+      if (bad) { toast(bad); return; }
+    }
     if (!U.prog) { toast('Choisis un programme.'); return; }
     const name = custom ? String(U.progName || '').trim() : PROGRAMS[U.prog].name;
     if (!name) { toast('Donne un nom à ton programme.'); const i = $('#setup-pname'); if (i) i.focus(); return; }
     if (!custom && !U.days.length) { toast('Choisis au moins un jour.'); return; }
     const program = { base: custom ? null : U.prog, name, days: DAY_ORDER.filter(d => !custom && U.days.indexOf(d) >= 0) };
     const patch = { program, plan: buildPlan(program.base, program.days) };
-    if (first) { patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; patch.created = today(); }
+    if (first) {
+      patch.name = String(U.name || '').trim(); patch.modules = { knee:false, jumps:false, sport:false }; patch.created = today();
+      if (U.sex) patch.sex = U.sex;
+      if (U.birth) patch.birth = U.birth;
+      if (num(U.height) != null) patch.height = num(U.height);
+    }
     if (first || U.restart) patch.start = mondayOf(today());
     putSettings(patch);
+    if (first && num(U.weight) != null) saveWeight(num(U.weight));
     S.setup = null; S.renaming = false; S.progTab = 'seances';
-    S.view = custom || !first ? 'program' : 'today';
+    S.view = custom || !first ? 'training' : 'today';
     render(); window.scrollTo(0, 0);
     toast(custom ? 'Programme créé : ajoute ta première séance.' : first ? 'C’est parti !' : 'Programme changé.');
   },
+  'setup-sex'(b){ S.setup.sex = S.setup.sex === b.dataset.v ? null : b.dataset.v; render(); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
+  // Profil, apparence, sous-onglets de Progrès
+  profile(){ S.view = 'profile'; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  science(){ S.view = 'science'; render(); window.scrollTo(0, 0); },
+  prtab(b){ S.progressTab = b.dataset.v; S.confirm = null; render(); },
+  'set-sex'(b){ putSettings({ sex: settings().sex === b.dataset.v ? null : b.dataset.v }); render(); },
+  theme(b){ putSettings({ theme: b.dataset.v }); applyTheme(b.dataset.v); render(); },
   'prog-rename'(){ S.renaming = true; render(); const i = $('#prog-name'); if (i) i.focus(); },
   'prog-rename-save'(){ const v = String(($('#prog-name') || {}).value || '').trim(); if (!v) { toast('Donne un nom à ton programme.'); return; } putSettings({ program: Object.assign({}, programOf(), { name:v }) }); S.renaming = false; render(); toast('Programme renommé.'); },
-  'go-new-tpl'(){ S.view = 'program'; S.progTab = 'seances'; A['new-tpl'](); },
+  'go-new-tpl'(){ S.view = 'training'; S.progTab = 'seances'; A['new-tpl'](); },
   mod(b){ const m = Object.assign({}, mods()); m[b.dataset.v] = b.checked; putSettings({ modules:m }); render(); toast(b.checked ? 'Option activée.' : 'Option désactivée.'); },
   'sport-day'(b){ const sp = Object.assign({ name:'', train:[], match:[] }, settings().sport); const k = b.dataset.k; const o = k === 'train' ? 'match' : 'train'; const wd = +b.dataset.v; sp[k] = toggleIn(sp[k], wd); sp[o] = (sp[o] || []).filter(x => x !== wd); putSettings({ sport:sp }); render(); },
   'ex-hide'(b){ const id = b.dataset.v; const ex = excluded().filter(x => x !== id); if (b.checked) ex.push(id); putSettings({ excluded:ex }); toast(b.checked ? 'Exercice masqué.' : 'Exercice affiché à nouveau.'); },
@@ -156,7 +184,7 @@ const A = {
   'ask-del-w'(b){ S.confirm = b.dataset.v; render(); },
   'cancel-confirm'(){ S.confirm = null; render(); },
   'del-w'(b){ del(b.dataset.v); S.confirm = null; S.openHist = null; render(); toast('Séance supprimée.'); },
-  reopen(b){ const w = S.docs.get(b.dataset.v); if (!w || activeWorkout()) return; w.status = 'en_cours'; put(b.dataset.v, w); S.view = 'session'; render(); window.scrollTo(0, 0); toast('Séance rouverte : corrige puis termine-la.'); },
+  reopen(b){ const w = S.docs.get(b.dataset.v); if (!w || activeWorkout()) return; w.status = 'en_cours'; put(b.dataset.v, w); S.view = 'training'; render(); window.scrollTo(0, 0); toast('Séance rouverte : corrige puis termine-la.'); },
   'add-test'(){ const cm = num($('#test-cm').value); const date = $('#test-date').value || today(); if (cm == null || cm <= 0 || cm > 150) { toast('Indique une hauteur en cm, par exemple 52.'); return; } put('t_' + Date.now().toString(36), { date, cm }); render(); toast('Test ajouté.'); },
   'del-test'(b){ if (S.confirm === b.dataset.v) { del(b.dataset.v); S.confirm = null; } else S.confirm = b.dataset.v; render(); },
   // Choix d'exercice
@@ -177,7 +205,7 @@ const A = {
     const D = S.draft; const t = D.data;
     if (!t.name.trim()) { toast('Donne un nom à la séance.'); $('#d-name').focus(); return; }
     if (!t.items.length) { toast('Ajoute au moins un exercice.'); return; }
-    saveTpl(Object.assign({ id:D.id }, t)); S.draft = null; S.confirm = null; S.view = 'program'; S.progTab = 'seances'; render(); toast('Séance enregistrée.');
+    saveTpl(Object.assign({ id:D.id }, t)); S.draft = null; S.confirm = null; S.view = 'training'; S.progTab = 'seances'; render(); toast('Séance enregistrée.');
   },
   'reset-tpl'(){ del('p_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-tpl'(){ S.confirm = 'del-tpl'; render(); },
@@ -246,8 +274,10 @@ document.addEventListener('change', e => {
   if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it.ss = t.value || null; return; }
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
   if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
-  if (t.id === 'set-height') { putSettings({ height: num(t.value) }); toast('Taille enregistrée.'); return; }
-  if (t.id === 'set-name') { putSettings({ name: t.value.trim() }); toast('Prénom enregistré.'); return; }
+  if (t.id === 'set-height') { const bad = profileError('height', t.value); if (bad) { toast(bad); render(); return; } putSettings({ height: num(t.value) }); toast('Taille enregistrée.'); return; }
+  if (t.id === 'set-name') { const v = t.value.trim(); if (!v) { toast('Ton prénom ou pseudo est obligatoire.'); render(); return; } putSettings({ name: v }); render(); toast('Prénom enregistré.'); return; }
+  if (t.id === 'set-birth') { const bad = profileError('birth', t.value); if (bad) { toast(bad); render(); return; } putSettings({ birth: t.value || null }); toast('Date de naissance enregistrée.'); return; }
+  if (t.id === 'set-weight') { const bad = profileError('weight', t.value); if (bad || num(t.value) == null) { if (bad) toast(bad); render(); return; } saveWeight(num(t.value)); render(); toast('Poids enregistré.'); return; }
   if (t.id === 'set-sport') { putSettings({ sport: Object.assign({ train:[], match:[] }, settings().sport, { name: t.value.trim() }) }); render(); toast('Sport enregistré.'); return; }
   if (t.id === 'start-date' && t.value) { const st = mondayOf(t.value); putSettings({ start: st }); render(); toast(withDot('Début fixé au lundi ' + fmtDate(st))); return; }
   if (t.id === 'import-file' && t.files && t.files[0]) {
@@ -257,7 +287,7 @@ document.addEventListener('change', e => {
         const j = JSON.parse(r.result); const docs = j && j.docs; if (!docs || typeof docs !== 'object') throw new Error('format');
         let n = 0; Object.keys(docs).forEach(id => { if (/^(w_|k_|t_|b_|x_|p_)[A-Za-z0-9_\-.]+$/.test(id) || id === 'settings') { put(id, docs[id]); n++; } });
         // Exports version 2 ou plus anciens : réglages complétés comme au chargement
-        upgradeLegacy();
+        upgradeLegacy(); applyTheme(settings().theme);
         if (S.setup && S.setup.mode === 'welcome' && !needsSetup()) S.setup = null;
         toast(n + ' éléments importés.'); render();
       } catch (err) { toast('Fichier non reconnu : choisis un export JSON du carnet.'); }

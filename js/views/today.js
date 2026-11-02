@@ -40,7 +40,7 @@ export function viewToday(){
   h += '<div class="goal"><span class="t">' + esc(goal.t) + '</span><p>' + esc(goal.d) + '</p></div>';
 
   if (aw) {
-    h += '<section class="card plan"><span class="label">Séance en cours</span><div class="name">' + esc(wName(aw)) + '</div><button type="button" class="btn primary big" data-act="tab" data-v="session">Reprendre la séance</button></section>';
+    h += '<section class="card plan"><span class="label">Séance en cours</span><div class="name">' + esc(wName(aw)) + '</div><button type="button" class="btn primary big" data-act="tab" data-v="training">Reprendre la séance</button></section>';
   } else if (plan.s) {
     const t = tplDef(plan.s);
     h += '<section class="card plan"><span class="label">' + (doneToday.length ? 'Au programme' : 'Rappel : séance aujourd’hui') + '</span><div class="name">' + esc(t.name) + '</div><p>' + esc(t.focus || '') + ' · environ ' + tplEst(t) + ' min</p>' + (plan.note ? '<p class="muted small">' + esc(plan.note) + '</p>' : '');

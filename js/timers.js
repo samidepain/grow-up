@@ -23,7 +23,7 @@ function onTick(){
     el.className = 'clock' + (m >= 90 ? ' bad' : m >= 75 ? ' warn' : '');
     const cw = $('#cutwarn'); if (cw) cw.hidden = m < 75;
   }
-  if (!S.restEnd && !S.restDoneAt && !(w && S.view === 'session')) { clearInterval(tick); tick = null; }
+  if (!S.restEnd && !S.restDoneAt && !(w && S.view === 'training')) { clearInterval(tick); tick = null; }
 }
 export function updateRest(){
   const bar = $('#restbar');

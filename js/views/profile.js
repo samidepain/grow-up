@@ -1,0 +1,81 @@
+// Écran Profil : ce qui te concerne, apparence, options, sauvegarde, et « La science ».
+import { esc, fmtDate, fmtDateLong, fmtKg, num, today, withDot } from '../util.js';
+import { DAY_ORDER, DAY_SHORT } from '../library.js';
+import { S } from '../store.js';
+import { bodyDocs, excluded, exDef, jumpsOn, kneeOn, mods, settings, sportInfo, startDate } from '../data.js';
+import { useShare } from '../backup.js';
+import { VERSION } from '../version.js';
+
+// « Tu es un loutron ou une loutronne ? » : facultatif, un second appui sur le choix l'annule
+export function sexChips(act, val){
+  return '<div class="stack" style="gap:6px"><span class="label">Tu es un loutron ou une loutronne ?</span><div class="chips" role="group">' +
+    [['m', 'Un loutron'], ['f', 'Une loutronne']].map(o => '<button type="button" class="chip txt' + (val === o[0] ? ' on' : '') + '" data-act="' + act + '" data-v="' + o[0] + '" aria-pressed="' + (val === o[0]) + '">' + o[1] + '</button>').join('') + '</div></div>';
+}
+export function viewProfile(){
+  const s = settings(); const pesees = bodyDocs().filter(b => num(b.weight) > 0); const last = pesees[pesees.length - 1];
+  let h = '<h1>Profil</h1>';
+  h += '<section class="card"><h3>Toi</h3><label class="f"><span>Prénom ou pseudo</span><input id="set-name" value="' + esc(s.name || '') + '" autocomplete="nickname"></label>';
+  h += sexChips('set-sex', s.sex);
+  h += '<label class="f"><span>Date de naissance</span><input type="date" id="set-birth" value="' + esc(s.birth || '') + '" max="' + today() + '"></label>';
+  h += '<div class="fields"><label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>';
+  h += '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label></div>';
+  h += '<p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est enregistré à la date du jour, comme dans « Corps et sommeil ». Tout est facultatif, sauf le prénom ou pseudo.</p></section>';
+  const t = s.theme || 'auto';
+  h += '<section class="card"><h3>Apparence</h3><div class="chips" role="group">' + [['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(o => '<button type="button" class="chip txt' + (t === o[0] ? ' on' : '') + '" data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (t === o[0]) + '">' + o[1] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
+  h += viewSettingsCards();
+  h += '<section class="card"><div class="row between"><div class="stack" style="gap:2px"><h3>La science</h3><span class="muted small">Comment l’appli fixe tes objectifs, et ses sources.</span></div><button type="button" class="btn" data-act="science">Lire</button></div></section>';
+  h += '<p class="muted small" style="text-align:center">Loutrons · version ' + esc(VERSION) + '</p>';
+  return h;
+}
+export function viewSciencePage(){
+  return '<div class="row between"><h1>La science</h1><button type="button" class="link" data-act="profile">Retour au profil</button></div>' + viewScience();
+}
+function viewSettingsCards(){
+  const s = settings();
+  let h = '<section class="card"><h3>Début du programme</h3><p class="muted small">Sert à calculer la semaine du bloc de 6 semaines (5 de progression, 1 de décharge). Choisis le lundi de ta première semaine.</p><input type="date" class="plain" id="start-date" value="' + esc(startDate()) + '"></section>';
+  h += optionsCard();
+  const hid = excluded().map(exDef).filter(Boolean);
+  h += '<section class="card"><h3>Exercices masqués</h3><p class="muted small">Ils ne sont plus proposés quand tu ajoutes ou remplaces un exercice. Les séances qui les contiennent ne changent pas.</p>';
+  h += hid.length ? hid.map(e => '<div class="row between"><span>' + esc(e.name) + '</span><button type="button" class="btn sm" data-act="ex-unhide" data-v="' + esc(e.id) + '">Afficher à nouveau</button></div>').join('') : '<p class="small">Aucun. Pour masquer un exercice, ouvre-le dans Entraînement › Exercices.</p>';
+  h += '</section>';
+  h += '<section class="card"><h3>Tes données</h3><p class="small">Tes séances sont enregistrées seulement sur cet appareil. Exporte-les régulièrement.</p>';
+  h += '<p class="small"><b>' + (s.lastExport ? esc(withDot('Dernière sauvegarde : ' + fmtDateLong(s.lastExport))) : 'Aucune sauvegarde pour l’instant.') + '</b> Seul l’export JSON compte comme sauvegarde.</p>';
+  h += '<div class="row"><button type="button" class="btn" data-act="export" data-v="json">Exporter (JSON)</button><button type="button" class="btn" data-act="export" data-v="csv">Exporter les séries (CSV)</button></div>';
+  if (useShare('json')) h += '<p class="muted small">«&nbsp;Exporter&nbsp;» ouvre le menu de partage&nbsp;: choisis «&nbsp;Enregistrer dans Fichiers&nbsp;» pour garder une copie, ou envoie le fichier.</p>';
+  h += '<label class="f"><span>Importer un export JSON</span><input type="file" id="import-file" accept=".json,application/json"></label>';
+  h += '</section>';
+  return h;
+}
+function optionsCard(){
+  const m = mods(); const sp = sportInfo(); const raw = settings().sport || {};
+  const tog = (k, title, desc) => '<label class="toggle"><input type="checkbox" id="mod-' + k + '" data-act="mod" data-v="' + k + '"' + (m[k] ? ' checked' : '') + '><span><b>' + title + '</b><br><span class="muted small">' + desc + '</span></span></label>';
+  let h = '<section class="card"><h3>Options</h3><p class="muted small">Désactivées au départ : active seulement ce qui te sert.</p>';
+  h += tog('knee', 'Suivi d’une douleur au genou', 'Douleur le matin et pendant les séances jambes. Au-dessus de 3/10, pas de sauts et pas de hausse de charge sur les exercices qui sollicitent le genou.');
+  h += tog('jumps', 'Détente et sauts', 'Exercices de pliométrie dans les séances et un test de détente pendant chaque semaine de décharge.');
+  h += tog('sport', 'Sport collectif à côté', 'Tes jours d’entraînement et de match apparaissent dans ta semaine.' + (m.jumps ? ' Tu peux aussi signaler une semaine chargée : pas de sauts en salle.' : ''));
+  if (m.sport) {
+    const days = k => '<div class="days" role="group">' + DAY_ORDER.map(wd => '<button type="button" class="chip txt' + (sp[k].indexOf(wd) >= 0 ? ' on' : '') + '" data-act="sport-day" data-k="' + k + '" data-v="' + wd + '" aria-pressed="' + (sp[k].indexOf(wd) >= 0) + '">' + DAY_SHORT[wd] + '</button>').join('') + '</div>';
+    h += '<div class="stack"><label class="f"><span>Ton sport</span><input id="set-sport" value="' + esc(raw.name || '') + '" placeholder="ex. Basket, foot, hand"></label><span class="label">Jours d’entraînement</span>' + days('train') + '<span class="label">Jours de match</span>' + days('match') + '</div>';
+  }
+  return h + '</section>';
+}
+function viewScience(){
+  const sec = (t, p, src) => '<div class="stack"><h3>' + t + '</h3><p>' + p + '</p>' + (src ? '<p class="src">' + src + '</p>' : '') + '</div>';
+  let h = '<section class="card sci"><h2>Comment l’appli fixe tes objectifs</h2>';
+  h += sec('Reps ou charge : les deux marchent', 'Augmenter les reps à charge constante ou augmenter la charge donne une prise de muscle très proche sur 8 semaines. L’appli combine les deux (double progression) : d’abord les reps jusqu’au haut de la fourchette, puis la charge.', 'Plotkin et al., 2022, PeerJ.');
+  h += sec('Quand monter la charge', 'Quand tu fais le haut de la fourchette sur toutes les séries <b>deux séances de suite</b>, ou une seule fois mais avec <b>au moins 2 reps en réserve</b> sur la dernière série. C’est l’adaptation de la recommandation de l’ACSM (1 à 2 reps de plus que la cible, deux séances de suite) et de la règle « 2 pour 2 » de la NSCA.', 'ACSM, position officielle de 2009 sur la progression en musculation.');
+  h += sec('De combien monter', 'L’ACSM recommande +2 à 10 %, moins pour les petits muscles. L’appli prend +2 % (isolation), +2,5 % (haut du corps) ou +5 % (bas du corps), et le haut de la plage (5, 5 ou 10 %) si tu avais 3 reps ou plus en réserve. Le résultat est arrondi au plus petit palier de ton matériel (réglable par exercice), avec au moins un palier. Pour les tractions et les exercices au poids du corps, le pourcentage est calculé sur ton poids de corps plus le lest.', 'ACSM 2009 ; paliers de la NSCA : 1 à 2,5 kg en haut du corps, 2,5 à 5 kg en bas du corps.');
+  h += sec('Combien de reps à la nouvelle charge', 'L’appli estime ta force maximale avec la formule d’Epley à partir de ta dernière série (reps faites + reps en réserve), puis calcule combien de reps tu peux faire à la nouvelle charge en gardant ta réserve cible. C’est une estimation, plus fiable entre 3 et 12 reps.', '');
+  h += sec('Reps en plus', '+1 rep par série en général. +2 si tu avais 3 reps ou plus en réserve, pour te rapprocher de ta cible. Aucune rep en plus si tu étais à l’échec : tu consolides.', '');
+  h += sec('Reps en réserve visées', '1 en réserve sur l’isolation, 2 sur les gros exercices (1 en fin de bloc' + (kneeOn() ? ', sauf ceux qui sollicitent le genou' : '') + '). La prise de muscle progresse quand on se rapproche de l’échec, alors que la force progresse de façon semblable sur une large plage.', 'Robinson et al., 2024, Sports Medicine (méta-régressions sur la proximité de l’échec).');
+  h += sec('Charge trop lourde ou stagnation', 'Si la plupart des séries tombent sous la fourchette, l’appli recalcule une charge plus basse d’après ta force estimée. Après 3 séances à la même charge sans progrès, elle propose −10 % puis de remonter. Cette dernière règle vient de la pratique, pas d’une étude.', '');
+  h += sec('Volume par muscle', 'Plus de séries par semaine donne plus de muscle, avec des gains qui diminuent progressivement. Une série compte pour 1 sur le muscle principal et 0,5 sur les muscles secondaires.', 'Pelland et al., 2026, Sports Medicine (méta-régression dose-réponse).');
+  h += sec('Repos', '2 à 3 min sur les gros exercices lourds, 1 à 2 min sur les autres.', 'ACSM 2009.');
+  h += sec('Décharge', 'Une semaine plus légère toutes les 6 semaines : mêmes charges, environ 1/3 de séries en moins, plus de reps en réserve' + (jumpsOn() ? ', moitié des sauts' : '') + '. Les entraîneurs placent souvent la décharge toutes les 4 à 6 semaines pendant environ 7 jours, en baissant surtout le volume. C’est un consensus de praticiens, pas une preuve expérimentale.', 'Bell et al., 2023, Sports Medicine – Open (consensus Delphi).');
+  if (kneeOn()) h += sec('Genou', 'L’exercice progressif pour la hanche et le genou est la base de la prise en charge du syndrome fémoro-patellaire. Le seuil de 3/10 est un repère pratique : au-dessus, l’appli suspend les sauts et bloque les hausses de charge sur les exercices qui sollicitent le genou pendant 10 jours.', 'Willy et al., 2019, JOSPT (recommandations cliniques). Cette appli ne remplace pas un avis médical.');
+  h += sec('Poids de corps', 'Pour prendre du muscle sans trop de gras, la revue d’Iraki et al. propose une hausse d’environ 0,25 à 0,5 % du poids par semaine chez les pratiquants débutants et intermédiaires. Le bilan de bloc compare ton rythme à cette cible.', 'Iraki et al., 2019, Sports (revue narrative).');
+  if (jumpsOn()) h += sec('Test de détente', 'Un test par bloc, pendant la semaine de décharge, au même moment de la séance et avec la même méthode, pour que les mesures soient comparables. Le choix de la décharge (quand la fatigue est la plus basse) est une pratique de terrain.', '');
+  h += sec('Alerte de fatigue', 'Si ta force estimée baisse de plus de 2,5 % sur au moins 3 exercices (et au moins 40 % de ceux faits cette semaine), l’appli propose d’avancer la décharge. Une baisse de performance sur plusieurs exercices est un signe de fatigue courant ; les seuils sont des repères de terrain.', '');
+  h += sec('Sommeil et montée en charge', 'Après une nuit de moins de 6 h, l’appli conseille de garder 1 rep de plus en réserve. La montée en charge avant les gros exercices (50, 70 puis 85 % de la charge de travail) est une pratique courante. Ces deux repères viennent du terrain.', '');
+  return h + '</section>';
+}

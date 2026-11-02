@@ -5,7 +5,7 @@ import { put, S } from './store.js';
 
 export function settings(){ return S.docs.get('settings') || {}; }
 export function putSettings(patch){ put('settings', Object.assign({}, settings(), { start: startDate() }, patch)); }
-// Options désactivées au départ, activables dans Programme › Réglages
+// Options désactivées au départ, activables dans le profil
 export const mods = () => settings().modules || {};
 export const kneeOn = () => !!mods().knee, jumpsOn = () => !!mods().jumps, sportOn = () => !!mods().sport;
 export function sportInfo(){ const s = settings().sport || {}; return { name: String(s.name || '').trim() || 'Sport', train: s.train || [], match: s.match || [] }; }

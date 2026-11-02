@@ -6,7 +6,7 @@ import { activeWorkout, countSets, itemsOf, validSets, wName, workouts } from '.
 export function viewHistory(){
   if (!S.loaded) return '<p class="empty">Chargement…</p>';
   const ws = workouts().reverse(); const aw = activeWorkout();
-  let h = '<h1>Historique</h1>';
+  let h = '';
   if (!ws.length) return h + '<section class="card"><p class="muted">Tes séances apparaîtront ici dès que tu en auras commencé une.</p></section>';
   ws.forEach(w => {
     const open = S.openHist === w.id;
