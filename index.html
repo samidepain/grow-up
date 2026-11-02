@@ -228,6 +228,21 @@ textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:1
 .restbar.end .restbar-in{background:var(--good);color:#fff}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabs-h) + 84px + env(safe-area-inset-bottom,0px));z-index:40;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;max-width:calc(100% - 32px);text-align:center}
 .empty{color:var(--muted);font-size:14px;padding:8px 0}
+/* Fiche d'exercice : photos du mouvement (départ, arrivée) et silhouette des muscles travaillés */
+input[type=search]{-webkit-appearance:none;appearance:none}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.photos figure{margin:0;display:flex;flex-direction:column;gap:4px}
+.photos img{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:10px;background:var(--surface-2)}
+.photos figcaption{font-size:13px;color:var(--muted);text-align:center}
+.bodymap{display:block;width:100%;max-width:260px;height:auto;margin:0 auto}
+.bodymap path{fill:var(--surface-2);stroke:var(--line);stroke-width:.8;stroke-linejoin:round}
+.bodymap path.p{fill:var(--accent);stroke:var(--accent-ink)}
+.bodymap path.s{fill:var(--court);fill-opacity:.45;stroke:var(--court)}
+.bodymap text{fill:var(--muted);font-size:10px;text-anchor:middle;font-family:var(--f-body)}
+.legend .lg-p{background:var(--accent)}
+.legend .lg-s{background:var(--court);opacity:.6}
+p.legend{justify-content:center}
+details.cue[open]{display:flex;flex-direction:column;gap:10px}
 .sci h3{font-size:18px}
 .sci p{font-size:15px}
 .sci .src{font-size:13px;color:var(--muted)}

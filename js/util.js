@@ -36,6 +36,8 @@ export function monthDays(ym){
   return out;
 }
 export const lowFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
+// Texte comparable : sans accents ni majuscules, ponctuation remplacée par des espaces
+export const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 let toastT = null;
 export function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3500); }
 export function toggleIn(arr, v){ arr = (arr || []).slice(); const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); return arr; }

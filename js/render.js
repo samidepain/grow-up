@@ -11,6 +11,7 @@ import { viewProgram } from './views/program.js';
 import { viewProfile, viewSciencePage } from './views/profile.js';
 import { newSetup, viewSetup } from './views/setup.js';
 import { viewDraft } from './views/editors.js';
+import { viewFiche } from './views/fiche.js';
 
 const ICONS = {
   today:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
@@ -35,7 +36,7 @@ export function render(){
   $('.tabs').hidden = !!(S.setup && S.setup.mode === 'welcome');
   const v = S.view; const aw = activeWorkout();
   $('#app').innerHTML = S.setup ? viewSetup() : S.picker ? viewPicker() : S.draft ? viewDraft() : S.bilan ? viewBilan(S.bilan)
-    : v === 'training' ? (aw ? viewSession() : viewProgram()) : v === 'progress' ? viewProgressPage()
+    : v === 'training' ? (aw ? viewSession() : S.fiche ? viewFiche() : viewProgram()) : v === 'progress' ? viewProgressPage()
     : v === 'profile' ? viewProfile() : v === 'science' ? viewSciencePage() : viewToday();
   if (v === 'training' && aw) ensureTick();
 }

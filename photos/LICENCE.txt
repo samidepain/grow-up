@@ -1,0 +1,12 @@
+Photos des exercices
+
+Source : Free Exercise DB, https://github.com/yuhonas/free-exercise-db
+(données reprises de https://github.com/wrkout/exercises.json).
+Licence : The Unlicense. Les auteurs ont placé ces photos et ces données
+dans le domaine public : on peut les copier, les modifier et les publier
+librement, sans demander d'autorisation.
+
+Modifications : images réduites à 360 pixels de large.
+Nom des fichiers : <identifiant Free Exercise DB>-0.jpg (position de départ)
+et -1.jpg (position d'arrivée). Le champ « photo » des exercices de
+js/library.js donne cet identifiant.

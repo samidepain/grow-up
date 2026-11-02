@@ -1,5 +1,5 @@
 // Accès aux données : réglages, exercices, séances modèles, planning, historique.
-import { addDays, capFirst, clone, daysBetween, e1rm, lowFirst, mondayOf, num, parseIso, today } from './util.js';
+import { addDays, capFirst, clone, daysBetween, e1rm, lowFirst, mondayOf, norm, num, parseIso, today } from './util.js';
 import { ALIAS, BASE_EX, BASE_TPL, DAY_NOTES, DAY_ORDER, M, PROGRAMS } from './library.js';
 import { put, S } from './store.js';
 
@@ -57,6 +57,20 @@ export function allEx(){
 }
 // Exercices proposés dans les listes de choix : sans les exercices masqués, ni les sauts si le module détente est désactivé
 export function offeredEx(){ const hid = excluded(); return allEx().filter(e => hid.indexOf(e.id) < 0 && (jumpsOn() || e.kind !== 'plyo')); }
+// Recherche d'exercice tolérante : accents, majuscules, pluriels et ponctuation ignorés ; chaque mot cherché doit
+// commencer un mot du nom, d'un autre nom (aka) ou d'un muscle. Ordre : nom qui commence par la recherche, puis nom, autres noms, muscles.
+export function searchEx(list, q){
+  const words = norm(q).split(' ').filter(Boolean).map(w => w.length > 3 && w.slice(-1) === 's' ? w.slice(0, -1) : w);
+  if (!words.length) return list;
+  const hit = (txt, w) => { const t = norm(txt); return t.split(' ').some(x => x.indexOf(w) === 0) || (w.length >= 4 && t.replace(/ /g, '').indexOf(w) >= 0); };
+  const all = (txt) => words.every(w => hit(txt, w));
+  return list.map(e => {
+    const ms = e.muscles || M(); const aka = (e.aka || []).join(' ');
+    const rank = norm(e.name).indexOf(norm(q)) === 0 ? 4 : all(e.name) ? 3 : all(e.name + ' ' + aka) ? 2
+      : all(e.name + ' ' + aka + ' ' + (ms.p || []).join(' ')) ? 1 : all(e.name + ' ' + aka + ' ' + (ms.p || []).concat(ms.s || []).join(' ')) ? 0 : -1;
+    return { e, rank };
+  }).filter(x => x.rank >= 0).sort((a, b) => b.rank - a.rank || a.e.name.localeCompare(b.e.name, 'fr')).map(x => x.e);
+}
 const isPlyo = it => { const e = exDef(it.ex); return !!e && e.kind === 'plyo'; };
 export function tplDef(id){
   const ov = S.docs.get('p_' + id); const base = BASE_TPL[id];

@@ -8,6 +8,7 @@ import { downloadFile, exportFile, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
 import { applyTheme, render } from './render.js';
 import { pickerList } from './views/picker.js';
+import { exerciseList } from './views/program.js';
 import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
 
@@ -78,7 +79,7 @@ function profileError(f, v){
 // Pesée du jour, comme dans « Corps et sommeil »
 function saveWeight(kg){ const d = today(); put('b_' + d, Object.assign({ date:d }, S.docs.get('b_' + d) || {}, { weight:kg })); }
 const A = {
-  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
+  tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   // Premier lancement et programme
   'setup-prog'(b){ const U = S.setup; U.prog = b.dataset.v; if (PROGRAMS[U.prog]) U.days = PROGRAMS[U.prog].days.slice(); render(); },
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
@@ -227,6 +228,8 @@ const A = {
   'draft-cancel'(){ const after = S.draft && S.draft.after; S.draft = after ? after.prevDraft || null : null; S.confirm = null; if (after) S.picker = after.picker; render(); },
   // Exercices
   'new-ex'(){ S.draft = { kind:'ex', isNew:true, id:null, data:blankEx() }; render(); window.scrollTo(0, 0); },
+  'ex-fiche'(b){ S.fiche = b.dataset.v; S.ficheY = window.scrollY; render(); window.scrollTo(0, 0); },
+  'fiche-close'(){ S.fiche = null; render(); window.scrollTo(0, S.ficheY || 0); },
   'edit-ex'(b){ const e = exDef(b.dataset.v); if (!e) return; const d = clone(e); delete d.id; delete d.custom; S.draft = { kind:'ex', isNew:false, id:e.id, data:d }; render(); window.scrollTo(0, 0); },
   'e-kind'(b){ S.draft.data.kind = b.dataset.v; if (b.dataset.v === 'plyo' && !S.draft.data.unit) S.draft.data.unit = 'sauts'; render(); },
   'e-cat'(b){ S.draft.data.cat = b.dataset.v; render(); },
@@ -251,7 +254,7 @@ const A = {
   },
   'reset-ex'(){ del('x_' + S.draft.id); S.draft = null; render(); toast('Version d’origine rétablie.'); },
   'del-ex'(){ S.confirm = 'del-ex'; render(); },
-  'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; render(); toast('Exercice supprimé.'); },
+  'del-ex-yes'(){ del('x_' + S.draft.id); S.draft = null; S.confirm = null; S.fiche = null; render(); toast('Exercice supprimé.'); },
   'reset-plan'(){ const g = programOf(); if (!g || !PROGRAMS[g.base]) return; putSettings({ plan: buildPlan(g.base, g.days || []) }); render(); toast('Planning d’origine rétabli.'); },
   // Données
   async export(b){
@@ -273,6 +276,7 @@ document.addEventListener('input', e => {
   if (t.matches('[data-f]')) { setField(t); return; }
   if (t.matches('[data-u]') && S.setup) { S.setup[t.dataset.u] = t.value; return; }
   if (t.matches('[data-pq]') && S.picker) { S.picker.q = t.value; const l = $('#pick-list'); if (l) l.innerHTML = pickerList(); return; }
+  if (t.matches('[data-xq]')) { S.exQ = t.value; const l = $('#ex-list'); if (l) l.innerHTML = exerciseList(); return; }
   if (t.matches('[data-d]') && S.draft) { S.draft.data[t.dataset.d] = t.value; return; }
   if (t.matches('[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it[t.dataset.k] = t.dataset.k === 'ss' ? (t.value || null) : t.value; return; }
   if (t.matches('[data-e]') && S.draft) { S.draft.data[t.dataset.e] = t.value; return; }
@@ -282,6 +286,11 @@ document.addEventListener('input', e => {
     bodyTimers[f] = setTimeout(() => { const cur = Object.assign({ date:d }, S.docs.get(id) || {}); const v = num(t.value); if (v == null) delete cur[f]; else cur[f] = v; put(id, cur); }, 600);
   }
 });
+// Photo d'exercice pas encore gardée et pas de connexion : message à la place des photos
+document.addEventListener('error', e => {
+  const box = e.target.closest && e.target.closest('.photos'); if (!box) return;
+  box.hidden = true; const m = box.nextElementSibling; if (m && m.classList.contains('photos-off')) m.hidden = false;
+}, true);
 // Calendrier : glisser vers la gauche (mois suivant) ou vers la droite (mois précédent)
 let swipe = null;
 document.addEventListener('touchstart', e => { swipe = e.target.closest('.cal-month') ? { x:e.touches[0].clientX, y:e.touches[0].clientY } : null; }, { passive:true });

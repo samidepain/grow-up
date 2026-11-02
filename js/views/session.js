@@ -6,6 +6,7 @@ import { activeWorkout, allTpl, exDef, history, itemsOf, jumpsOn, kneeOn, testDu
 import { warmup } from '../engine.js';
 import { kneeChips } from '../render.js';
 import { noTplCard } from './program.js';
+import { exVisual } from './fiche.js';
 
 export function viewSession(){
   const w = S.loaded && activeWorkout();
@@ -83,6 +84,7 @@ function exCard(it, w, idx){
     h += '</div><div class="row between"><button type="button" class="link" data-act="addset" data-ex="' + esc(key) + '">+ Ajouter une série</button>' + (st.sets.length > 1 ? '<button type="button" class="link" data-act="rmset" data-ex="' + esc(key) + '">Retirer la dernière</button>' : '') + '</div>';
     if (it.kind !== 'plyo') h += '<div class="stack" style="gap:6px"><span class="label">Reps en réserve sur la dernière série</span><div class="chips">' + [0,1,2,3,4].map(v => '<button type="button" class="chip' + (st.rir === v ? ' on' : '') + '" data-act="rir" data-ex="' + esc(key) + '" data-v="' + v + '" aria-pressed="' + (st.rir === v) + '">' + (v === 4 ? '4+' : v) + '</button>').join('') + '</div></div>';
   }
-  if (e.cue && it.kind !== 'check') h += '<details class="cue"><summary>Consignes</summary><p>' + esc(e.cue) + '</p></details>';
+  const cue = it.kind !== 'check' && e.cue; const vis = exVisual(e);
+  if (cue || vis) h += '<details class="cue"><summary>' + (cue && vis ? 'Consignes et schéma' : cue ? 'Consignes' : 'Schéma') + '</summary>' + (cue ? '<p>' + esc(cue) + '</p>' : '') + vis + '</details>';
   return h + '</section>';
 }

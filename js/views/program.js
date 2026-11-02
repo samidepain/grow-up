@@ -2,7 +2,7 @@
 import { esc, fmtDateLong, fmtKg, lowFirst, num, WEEKDAYS, withDot } from '../util.js';
 import { DAY_ORDER, DAY_SHORT, KINDS, MUSCLES, PROGRAMS } from '../library.js';
 import { S } from '../store.js';
-import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, planDay, programOf, settings, sportInfo, sportOn, startDate, tplEst, tplItems } from '../data.js';
+import { allEx, allTpl, excluded, exDef, jumpsOn, kneeOn, mods, planDay, programOf, searchEx, settings, sportInfo, sportOn, startDate, tplEst, tplItems } from '../data.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
 
@@ -37,14 +37,24 @@ function viewTemplates(){
   return h;
 }
 function viewExercises(){
-  let h = '<button type="button" class="btn primary" data-act="new-ex">+ Ajouter un exercice</button><p class="muted small">Les exercices ajoutés sont disponibles dans toutes les séances et pour « Remplacer ».</p>';
-  const hid = excluded(); const groups = {};
-  allEx().forEach(e => { if (e.kind === 'plyo' && !jumpsOn()) return; const g = hid.indexOf(e.id) >= 0 ? 'Masqués' : e.kind === 'plyo' ? 'Pliométrie' : e.kind === 'check' ? 'Autres' : ((e.muscles.p || [])[0] || 'Autres'); (groups[g] = groups[g] || []).push(e); });
-  [...MUSCLES, 'Pliométrie', 'Autres', 'Masqués'].forEach(g => {
-    if (!groups[g]) return;
-    h += '<section class="card"><h3>' + esc(g) + '</h3>' + (g === 'Masqués' ? '<p class="muted small">Plus proposés quand tu ajoutes ou remplaces un exercice.</p>' : '') + groups[g].map(e => '<button type="button" class="pick" data-act="edit-ex" data-v="' + esc(e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(e.name) + '</span><span class="m">' + esc(KINDS[e.kind] || '') + (e.kind === 'load' || e.kind === 'bw' ? ' · ' + e.sets + ' × ' + e.lo + '-' + e.hi + ' · palier ' + fmtKg(e.step) + ' kg' : '') + (e.custom ? ' · perso' : '') + '</span></span><span aria-hidden="true">›</span></button>').join('') + '</section>';
-  });
-  return h;
+  const n = allEx().filter(e => e.kind !== 'plyo' || jumpsOn()).length;
+  let h = '<button type="button" class="btn primary" data-act="new-ex">+ Ajouter un exercice</button><p class="muted small">' + n + ' exercices. Touche un exercice pour voir sa fiche : photos, muscles travaillés et consignes.</p>';
+  h += '<input class="plain" type="search" id="ex-q" data-xq="1" placeholder="Rechercher : nom, muscle, « DC », « squat »…" aria-label="Rechercher un exercice" value="' + esc(S.exQ || '') + '" autocomplete="off" enterkeyhint="search">';
+  return h + '<div class="stack" id="ex-list" style="gap:16px">' + exerciseList() + '</div>';
+}
+const exRow = (e, hidden) => '<button type="button" class="pick" data-act="ex-fiche" data-v="' + esc(e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(e.name) + '</span><span class="m">' + esc(KINDS[e.kind] || '') + (e.kind === 'load' || e.kind === 'bw' ? ' · ' + e.sets + ' × ' + e.lo + '-' + e.hi : '') + (e.custom ? ' · perso' : '') + (hidden ? ' · masqué' : '') + '</span></span><span aria-hidden="true">›</span></button>';
+// Avec une recherche : résultats du plus proche au moins proche ; sinon, groupes par muscle principal
+export function exerciseList(){
+  const hid = excluded(); const list = allEx().filter(e => e.kind !== 'plyo' || jumpsOn());
+  if (String(S.exQ || '').trim()) {
+    const r = searchEx(list, S.exQ);
+    return r.length ? '<section class="card"><h3>' + r.length + ' résultat' + (r.length > 1 ? 's' : '') + '</h3>' + r.map(e => exRow(e, hid.indexOf(e.id) >= 0)).join('') + '</section>'
+      : '<p class="empty">Aucun exercice trouvé. Tu peux le créer avec « Ajouter un exercice ».</p>';
+  }
+  const groups = {};
+  list.forEach(e => { const g = hid.indexOf(e.id) >= 0 ? 'Masqués' : e.kind === 'plyo' ? 'Pliométrie' : ((e.muscles.p || [])[0] || 'Autres'); (groups[g] = groups[g] || []).push(e); });
+  return [...MUSCLES, 'Pliométrie', 'Autres', 'Masqués'].filter(g => groups[g]).map(g =>
+    '<section class="card"><h3>' + esc(g) + ' <span class="muted small">' + groups[g].length + '</span></h3>' + (g === 'Masqués' ? '<p class="muted small">Plus proposés quand tu ajoutes ou remplaces un exercice.</p>' : '') + groups[g].map(e => exRow(e, false)).join('') + '</section>').join('');
 }
 function viewPlanning(){
   const tpls = allTpl(); const g = programOf() || {};

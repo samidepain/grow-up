@@ -2,18 +2,21 @@
 import { esc } from '../util.js';
 import { KINDS } from '../library.js';
 import { S } from '../store.js';
-import { activeWorkout, canon, exDef, itemsOf, offeredEx } from '../data.js';
+import { activeWorkout, canon, exDef, itemsOf, offeredEx, searchEx } from '../data.js';
 
 export function pickerList(){
-  const P = S.picker; const q = (P.q || '').trim().toLowerCase();
+  const P = S.picker; const q = (P.q || '').trim();
   let ref = null;
   if (P.mode === 'replace') { const w = activeWorkout(); const it = w && itemsOf(w)[P.idx]; ref = it ? (exDef(it.ex) || it) : null; }
   const exclude = new Set();
   if (P.mode === 'replace' || P.mode === 'add') { const w = activeWorkout(); if (w) Object.keys(w.ex).forEach(k => exclude.add(canon(k))); }
-  let list = offeredEx().filter(e => !exclude.has(e.id) && (!q || e.name.toLowerCase().indexOf(q) >= 0 || (e.muscles.p || []).join(' ').toLowerCase().indexOf(q) >= 0));
+  let list = searchEx(offeredEx().filter(e => !exclude.has(e.id)), q);
   const score = e => { if (!ref || !ref.muscles) return 0; let s = 0; (ref.muscles.p || []).forEach(x => { if ((e.muscles.p || []).indexOf(x) >= 0) s += 3; else if ((e.muscles.s || []).indexOf(x) >= 0) s += 1; }); if (e.kind === ref.kind) s += 0.5; return s; };
-  list = list.map(e => ({ e, s:score(e) })).sort((a, b) => b.s - a.s || a.e.name.localeCompare(b.e.name, 'fr'));
+  // Avec une recherche, on garde l'ordre de la recherche ; sans recherche, les exercices du même muscle d'abord
+  list = list.map(e => ({ e, s:score(e) }));
+  if (!q) list.sort((a, b) => b.s - a.s || a.e.name.localeCompare(b.e.name, 'fr'));
   const row = x => '<button type="button" class="pick" data-act="pick" data-v="' + esc(x.e.id) + '"><span class="stack" style="gap:2px"><span class="n">' + esc(x.e.name) + '</span><span class="m">' + esc(KINDS[x.e.kind] || '') + ((x.e.muscles.p || []).length ? ' · ' + x.e.muscles.p.join(', ') : '') + (x.e.custom ? ' · perso' : '') + '</span></span><span aria-hidden="true">›</span></button>';
+  if (q) return list.map(row).join('') || '<p class="empty">Aucun exercice trouvé. Crée-le avec le bouton ci-dessus.</p>';
   const same = list.filter(x => x.s >= 3); const rest = list.filter(x => x.s < 3);
   let h = '';
   if (ref && same.length) h += '<span class="label">Même muscle</span>' + same.map(row).join('') + '<span class="label">Autres exercices</span>';

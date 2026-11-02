@@ -1,14 +1,18 @@
 // Loutrons : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
 // Même numéro que dans js/version.js (affiché dans Réglages).
-const VERSION = '1.4';
+const VERSION = '1.5';
 const CACHE = 'loutrons-' + VERSION;
+// Photos des exercices : pas toutes téléchargées à l'installation (environ 5 Mo), mais gardées dès qu'on les a vues une fois.
+// Cache à part, conservé d'une version à l'autre.
+const PHOTOS = 'loutrons-photos-1';
 const FILES = [
   './',
   'index.html',
   'js/app.js',
   'js/actions.js',
   'js/backup.js',
+  'js/bodymap.js',
   'js/chart.js',
   'js/data.js',
   'js/engine.js',
@@ -20,6 +24,7 @@ const FILES = [
   'js/version.js',
   'js/views/calendar.js',
   'js/views/editors.js',
+  'js/views/fiche.js',
   'js/views/history.js',
   'js/views/picker.js',
   'js/views/profile.js',
@@ -50,14 +55,19 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => (k.indexOf('loutrons-') === 0 || k.indexOf('grow-up-') === 0) && k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => (k.indexOf('loutrons-') === 0 || k.indexOf('grow-up-') === 0) && k !== CACHE && k !== PHOTOS).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
 // Cache d'abord : l'appli s'ouvre tout de suite, même avec un mauvais réseau à la salle
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (url.pathname.indexOf('/photos/') >= 0) {
+    e.respondWith(caches.open(PHOTOS).then(c => c.match(req).then(hit => hit || fetch(req).then(res => { if (res.ok) c.put(req, res.clone()); return res; }))));
+    return;
+  }
   e.respondWith(caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req).catch(err => {
     if (req.mode === 'navigate') return caches.match('./');
     throw err;
