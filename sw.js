@@ -1,7 +1,7 @@
 // Loutrons : garde tous les fichiers de l'appli en cache pour qu'elle marche sans connexion.
 // À chaque modification d'un de ces fichiers, changer VERSION : c'est ce qui fait récupérer la nouvelle version aux téléphones.
 // Même numéro que dans js/version.js (affiché dans Réglages).
-const VERSION = '1.3';
+const VERSION = '1.4';
 const CACHE = 'loutrons-' + VERSION;
 const FILES = [
   './',

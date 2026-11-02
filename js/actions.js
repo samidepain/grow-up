@@ -84,12 +84,19 @@ const A = {
   'setup-day'(b){ S.setup.days = toggleIn(S.setup.days, +b.dataset.v); render(); },
   'setup-restart'(b){ S.setup.restart = b.checked; },
   'setup-cancel'(){ S.setup = null; render(); },
+  'setup-next'(){
+    const U = S.setup;
+    if (!String(U.name || '').trim()) { toast('Indique ton prénom ou un pseudo.'); const i = $('#setup-name'); if (i) i.focus(); return; }
+    const bad = ['birth', 'height', 'weight'].map(f => profileError(f, U[f])).find(Boolean);
+    if (bad) { toast(bad); return; }
+    U.step = 2; $('#toast').hidden = true; render(); window.scrollTo(0, 0);
+  },
+  'setup-back'(){ S.setup.step = 1; render(); window.scrollTo(0, 0); },
   'setup-done'(){
     const U = S.setup; const first = U.mode === 'welcome'; const custom = U.prog === 'custom';
     if (first) {
-      if (!String(U.name || '').trim()) { toast('Indique ton prénom ou un pseudo.'); const i = $('#setup-name'); if (i) i.focus(); return; }
-      const bad = ['birth', 'height', 'weight'].map(f => profileError(f, U[f])).find(Boolean);
-      if (bad) { toast(bad); return; }
+      // Déjà vérifié à l'écran 1 ; on y revient si besoin
+      if (!String(U.name || '').trim() || ['birth', 'height', 'weight'].some(f => profileError(f, U[f]))) { U.step = 1; A['setup-next'](); return; }
     }
     if (!U.prog) { toast('Choisis un programme.'); return; }
     const name = custom ? String(U.progName || '').trim() : PROGRAMS[U.prog].name;
