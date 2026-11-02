@@ -71,3 +71,19 @@ test('bloc en cours : semaines écoulées et séances prévues jusqu’à aujour
   assert.equal(R.planned, 12);
   assert.equal(R.done.length, 2);
 });
+
+test('poids : comparé à l’objectif choisi quand l’alimentation est suivie', () => {
+  jour('2026-10-20');
+  const avec = goal => bloc({ nutrition: { on: true, activity: 'sit', goal } });
+  const poids = () => blockReport(1).tips.find(t => /[Pp]oids/.test(t[1]));
+  donnees(avec('gain'));
+  assert.match(poids()[1], /^Poids en hausse de 0,25 % par semaine/);
+  donnees(avec('keep'));
+  assert.deepEqual(poids(), ['good', 'Poids stable (+1 kg) : conforme à ton objectif.']);
+  donnees(avec('lose'));
+  assert.equal(poids()[0], 'info');
+  assert.match(poids()[1], /^Poids stable ou en hausse \(\+1 kg\)\. Pour perdre du gras/);
+  // Suivi arrêté : retour à la cible de prise de muscle
+  donnees(bloc({ nutrition: { on: false, goal: 'lose' } }));
+  assert.match(poids()[1], /^Poids en hausse de 0,25 %/);
+});

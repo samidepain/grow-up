@@ -5,6 +5,7 @@ import { S } from '../store.js';
 import { bodyDocs, excluded, exDef, jumpsOn, kneeOn, mods, settings, sportInfo, startDate } from '../data.js';
 import { useShare } from '../backup.js';
 import { VERSION } from '../version.js';
+import { goalProfileCard } from './goal.js';
 
 // « Tu es un loutron ou une loutronne ? » : facultatif, un second appui sur le choix l'annule
 export function sexChips(act, val){
@@ -20,6 +21,7 @@ export function viewProfile(){
   h += '<div class="fields"><label class="f"><span>Taille (cm)</span><input class="n" id="set-height" inputmode="decimal" value="' + esc(s.height == null ? '' : fmtKg(num(s.height))) + '" placeholder="ex. 180"></label>';
   h += '<label class="f"><span>Poids (kg)</span><input class="n" id="set-weight" inputmode="decimal" value="' + esc(last ? fmtKg(num(last.weight)) : '') + '" placeholder="ex. 75"></label></div>';
   h += '<p class="muted small">' + (last ? esc(withDot('Dernière pesée : ' + fmtDate(last.date))) + ' ' : '') + 'Un nouveau poids est enregistré à la date du jour, comme dans « Corps et sommeil ». Tout est facultatif, sauf le prénom ou pseudo.</p></section>';
+  h += goalProfileCard();
   const t = s.theme || 'auto';
   h += '<section class="card"><h3>Apparence</h3><div class="chips" role="group">' + [['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(o => '<button type="button" class="chip txt' + (t === o[0] ? ' on' : '') + '" data-act="theme" data-v="' + o[0] + '" aria-pressed="' + (t === o[0]) + '">' + o[1] + '</button>').join('') + '</div><p class="muted small">Automatique : comme le réglage de ton téléphone.</p></section>';
   h += viewSettingsCards();
@@ -77,5 +79,12 @@ function viewScience(){
   if (jumpsOn()) h += sec('Test de détente', 'Un test par bloc, pendant la semaine de décharge, au même moment de la séance et avec la même méthode, pour que les mesures soient comparables. Le choix de la décharge (quand la fatigue est la plus basse) est une pratique de terrain.', '');
   h += sec('Alerte de fatigue', 'Si ta force estimée baisse de plus de 2,5 % sur au moins 3 exercices (et au moins 40 % de ceux faits cette semaine), l’appli propose d’avancer la décharge. Une baisse de performance sur plusieurs exercices est un signe de fatigue courant ; les seuils sont des repères de terrain.', '');
   h += sec('Sommeil et montée en charge', 'Après une nuit de moins de 6 h, l’appli conseille de garder 1 rep de plus en réserve. La montée en charge avant les gros exercices (50, 70 puis 85 % de la charge de travail) est une pratique courante. Ces deux repères viennent du terrain.', '');
+  h += '</section><section class="card sci"><h2>Comment Émile calcule tes besoins</h2>';
+  h += sec('Dépense au repos', 'Calculée avec l’équation de Mifflin-St Jeor, à partir de ton poids, de ta taille, de ton âge et de « loutron ou loutronne ». C’est l’une des équations les plus justes chez l’adulte, mais l’écart avec la dépense réelle peut dépasser 10 % chez certaines personnes.', 'Mifflin et al., 1990, American Journal of Clinical Nutrition ; Frankenfield et al., 2005, Journal of the American Dietetic Association (comparaison des équations).');
+  h += sec('Activité au quotidien', 'La dépense au repos est multipliée par ton niveau d’activité, sans compter le sport : 1,4 (surtout assis), 1,55 (assis, avec de la marche), 1,7 (souvent debout) ou 1,9 (travail physique). Ces valeurs sont prises dans les fourchettes de la FAO, de l’OMS et de l’UNU ; le choix exact de chaque valeur est celui de l’appli. Tes séances ne sont pas comptées dans ce total.', 'FAO, OMS et UNU, 2004, Human energy requirements.');
+  h += sec('Objectif de poids', 'Environ 7 700 kcal par kilo : c’est une approximation courante, car le corps s’adapte et le poids varie aussi avec l’eau. Pour prendre du muscle sans trop de gras, le rythme conseillé est de 0,25 à 0,5 % du poids par semaine ; pour perdre du gras en gardant son muscle, de 0,5 à 1 % par semaine. Au-delà, Émile recadre l’objectif et propose une date réaliste.', 'Iraki et al., 2019, Sports (prise de poids) ; Helms, Aragon et Fitschen, 2014, Journal of the International Society of Sports Nutrition (perte de poids).');
+  h += sec('Limites de prudence', 'Émile ne propose jamais de manger moins que ta dépense au repos : c’est une règle de prudence de l’appli. Il refuse un poids visé correspondant à un IMC sous 18,5, le seuil d’insuffisance pondérale de l’OMS. Avant 18 ans, il ne propose pas de perte de poids et conseille d’en parler à un médecin ou à un diététicien.', 'Organisation mondiale de la santé (classification de l’IMC). Cette appli ne remplace pas un avis médical.');
+  h += sec('Protéines', '1,6 g par kilo de poids et par jour : au-delà, le gain de muscle supplémentaire devient très faible. Jusqu’à 2,2 g/kg pour couvrir les différences entre personnes.', 'Morton et al., 2018, British Journal of Sports Medicine (méta-analyse).');
+  h += sec('Lipides, fibres et glucides', 'Lipides : 35 à 40 % de l’énergie. Fibres : 30 g par jour. Glucides : le reste, une fois les protéines (1,6 g/kg) et les lipides (35 %) comptés ; l’ANSES conseille qu’ils fassent 40 à 55 % de l’énergie.', 'ANSES, 2016 (références nutritionnelles pour les adultes).');
   return h + '</section>';
 }

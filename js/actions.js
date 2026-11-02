@@ -1,8 +1,8 @@
 // Actions de l’interface : clics, saisies et changements.
-import { $, addMonths, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
+import { $, addDays, addMonths, clone, fmtDate, fmtKg, mondayOf, num, rid, toast, today, toggleIn, withDot } from './util.js';
 import { DAY_ORDER, PROGRAMS } from './library.js';
 import { del, put, S } from './store.js';
-import { activeWorkout, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
+import { activeWorkout, bodyweight, buildPlan, canon, excluded, exDef, itemsOf, mods, needsSetup, planOf, programOf, putSettings, saveTpl, settings, snapItem, tplDef, tplEst, tplItems, tplLower, upgradeLegacy, weekInfo } from './data.js';
 import { findPRs, initItem } from './engine.js';
 import { downloadFile, exportFile, useShare } from './backup.js';
 import { requestWake, startRest, stopRest, unlockAudio, updateRest } from './timers.js';
@@ -11,6 +11,8 @@ import { pickerList } from './views/picker.js';
 import { exerciseList } from './views/program.js';
 import { newSetup } from './views/setup.js';
 import { blankEx } from './views/editors.js';
+import { nutritionOf, profileData, setupData } from './views/goal.js';
+import { planFor } from './nutrition.js';
 
 function startWorkout(tplId){
   if (!S.loaded) return;
@@ -78,6 +80,36 @@ function profileError(f, v){
 }
 // Pesée du jour, comme dans « Corps et sommeil »
 function saveWeight(kg){ const d = today(); put('b_' + d, Object.assign({ date:d }, S.docs.get('b_' + d) || {}, { weight:kg })); }
+// Programme choisi à l'écran 2 de l'accueil (ou au changement de programme) : [message, champ] si incomplet
+function progError(U){
+  if (!U.prog) return ['Choisis un programme.'];
+  if (U.prog === 'custom' && !String(U.progName || '').trim()) return ['Donne un nom à ton programme.', '#setup-pname'];
+  if (U.prog !== 'custom' && !U.days.length) return ['Choisis au moins un jour.'];
+  return null;
+}
+// Objectif et alimentation : à l'accueil (S.setup.n) ou dans le profil (settings.nutrition).
+// Dans le profil, changer d'objectif repart du poids et de la date du jour.
+function nSave(patch, restart){
+  if (S.setup) { Object.assign(S.setup.n, patch); render(); return; }
+  const n = Object.assign({}, nutritionOf(), patch);
+  if (restart) n.start = { date: today(), weight: bodyweight() };
+  putSettings({ nutrition: n }); render();
+}
+// Plan calculé comme si l'objectif repartait d'aujourd'hui, avec une date volontairement trop proche : donne la date réaliste et la date conseillée
+function freshPlan(extra){
+  const U = S.setup; const n = Object.assign({}, U ? U.n : nutritionOf(), { start: null, by: addDays(today(), 7) }, extra);
+  return planFor(U ? setupData(U) : profileData(), n, today());
+}
+function nField(k, v){
+  if (k === 'target') {
+    const x = num(v);
+    if (x == null || x < 25 || x > 350) { toast('Indique ton poids visé en kg, par exemple 72,5.'); render(); return; }
+    const cur = S.setup ? S.setup.n : nutritionOf(); const patch = { target: x };
+    if (!cur.by) { const pl = freshPlan({ target: x }); if (pl.advised) patch.by = pl.advised; }
+    nSave(patch, true); return;
+  }
+  if (k === 'by') { if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { render(); return; } nSave({ by: v }, true); }
+}
 const A = {
   tab(b){ S.view = b.dataset.v; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; S.calMonth = null; S.calDay = null; S.fiche = null; S.exQ = ''; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
   // Premier lancement et programme
@@ -87,22 +119,27 @@ const A = {
   'setup-cancel'(){ S.setup = null; render(); },
   'setup-next'(){
     const U = S.setup;
+    if (U.step === 2) {
+      const e = progError(U); if (e) { toast(e[0]); const i = e[1] && $(e[1]); if (i) i.focus(); return; }
+      U.ask = ['sex', 'birth', 'height', 'weight'].filter(k => !U[k]);
+      U.step = 3; $('#toast').hidden = true; render(); window.scrollTo(0, 0); return;
+    }
     if (!String(U.name || '').trim()) { toast('Indique ton prénom ou un pseudo.'); const i = $('#setup-name'); if (i) i.focus(); return; }
     const bad = ['birth', 'height', 'weight'].map(f => profileError(f, U[f])).find(Boolean);
     if (bad) { toast(bad); return; }
     U.step = 2; $('#toast').hidden = true; render(); window.scrollTo(0, 0);
   },
-  'setup-back'(){ S.setup.step = 1; render(); window.scrollTo(0, 0); },
+  'setup-back'(){ S.setup.step = Math.max(1, S.setup.step - 1); render(); window.scrollTo(0, 0); },
   'setup-done'(){
     const U = S.setup; const first = U.mode === 'welcome'; const custom = U.prog === 'custom';
     if (first) {
       // Déjà vérifié à l'écran 1 ; on y revient si besoin
       if (!String(U.name || '').trim() || ['birth', 'height', 'weight'].some(f => profileError(f, U[f]))) { U.step = 1; A['setup-next'](); return; }
     }
-    if (!U.prog) { toast('Choisis un programme.'); return; }
+    const pe = progError(U);
+    if (pe) { if (first) U.step = 2; render(); toast(pe[0]); const i = pe[1] && $(pe[1]); if (i) i.focus(); return; }
     const name = custom ? String(U.progName || '').trim() : PROGRAMS[U.prog].name;
-    if (!name) { toast('Donne un nom à ton programme.'); const i = $('#setup-pname'); if (i) i.focus(); return; }
-    if (!custom && !U.days.length) { toast('Choisis au moins un jour.'); return; }
+    if (first && U.n.on && planFor(setupData(U), U.n, today()).status === 'missing') { toast('Complète ce qu’il manque pour le calcul, ou choisis « Pas maintenant ».'); return; }
     const program = { base: custom ? null : U.prog, name, days: DAY_ORDER.filter(d => !custom && U.days.indexOf(d) >= 0) };
     const patch = { program, plan: buildPlan(program.base, program.days) };
     if (first) {
@@ -110,6 +147,7 @@ const A = {
       if (U.sex) patch.sex = U.sex;
       if (U.birth) patch.birth = U.birth;
       if (num(U.height) != null) patch.height = num(U.height);
+      if (U.n.on) patch.nutrition = { on:true, activity:U.n.activity, goal:U.n.goal, target:num(U.n.target), by:U.n.by || null, start:{ date:today(), weight:num(U.weight) } };
     }
     if (first || U.restart) patch.start = mondayOf(today());
     putSettings(patch);
@@ -120,6 +158,13 @@ const A = {
     toast(custom ? 'Programme créé : ajoute ta première séance.' : first ? 'C’est parti !' : 'Programme changé.');
   },
   'setup-sex'(b){ S.setup.sex = S.setup.sex === b.dataset.v ? null : b.dataset.v; render(); },
+  'setup-n-on'(b){ S.setup.n.on = b.dataset.v === '1'; render(); },
+  // Objectif et alimentation
+  'n-on'(b){ nSave({ on: b.dataset.v === '1' }, b.dataset.v === '1' && !nutritionOf().start); if (b.dataset.v === '0') toast('Suivi de l’alimentation arrêté. Tes réglages sont gardés.'); },
+  'n-act'(b){ nSave({ activity: b.dataset.v }); },
+  'n-goal'(b){ nSave({ goal: b.dataset.v }, true); },
+  'n-realistic'(){ const pl = freshPlan(); if (pl.realistic) { nSave({ by: pl.realistic }, true); toast(withDot('Date visée : ' + fmtDate(pl.realistic))); } },
+  'goal-edit'(){ A.profile(); const c = $('#goal-card'); if (c) c.scrollIntoView({ block:'start' }); },
   'prog-change'(){ S.setup = newSetup('change'); render(); window.scrollTo(0, 0); },
   // Profil, apparence, sous-onglets de Progrès
   profile(){ S.view = 'profile'; S.confirm = null; S.picker = null; S.draft = null; S.bilan = null; S.renaming = false; if (S.setup && S.setup.mode === 'change') S.setup = null; render(); window.scrollTo(0, 0); },
@@ -305,6 +350,9 @@ document.addEventListener('change', e => {
   if (t.matches('select[data-it]') && S.draft) { const it = S.draft.data.items[+t.dataset.it]; if (it) it.ss = t.value || null; return; }
   if (t.matches('[data-plan]')) { const p = Object.assign({}, planOf()); const v = t.value; p[t.dataset.plan] = v.indexOf('s:') === 0 ? { s:v.slice(2) } : { label:v.slice(2) }; putSettings({ plan:p }); toast('Planning mis à jour.'); return; }
   if (t.id === 'prog-ex') { S.progEx = t.value; render(); return; }
+  if (t.matches('[data-n]')) { nField(t.dataset.n, t.value); return; }
+  // Accueil, écran 3 : données demandées pour le calcul, vérifiées puis prises en compte
+  if (t.matches('[data-u]') && S.setup && S.setup.step === 3) { const bad = profileError(t.dataset.u, t.value); if (bad) { toast(bad); return; } render(); return; }
   if (t.id === 'set-height') { const bad = profileError('height', t.value); if (bad) { toast(bad); render(); return; } putSettings({ height: num(t.value) }); toast('Taille enregistrée.'); return; }
   if (t.id === 'set-name') { const v = t.value.trim(); if (!v) { toast('Ton prénom ou pseudo est obligatoire.'); render(); return; } putSettings({ name: v }); render(); toast('Prénom enregistré.'); return; }
   if (t.id === 'set-birth') { const bad = profileError('birth', t.value); if (bad) { toast(bad); render(); return; } putSettings({ birth: t.value || null }); toast('Date de naissance enregistrée.'); return; }

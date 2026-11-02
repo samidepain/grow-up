@@ -36,6 +36,10 @@ export function monthDays(ym){
   return out;
 }
 export const lowFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
+// « 1er mars 2027 » : pour les dates d'objectif, souvent dans plusieurs mois
+export const fmtDateYear = s => { const d = parseIso(s); return (d.getDate() === 1 ? '1er' : d.getDate()) + ' ' + MONTHS_LONG[d.getMonth()] + ' ' + d.getFullYear(); };
+// 2 450 : séparateur des milliers (espace fine insécable)
+export const fmtInt = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
 // Texte comparable : sans accents ni majuscules, ponctuation remplacée par des espaces
 export const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 let toastT = null;
